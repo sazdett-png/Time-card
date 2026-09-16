@@ -10,12 +10,16 @@
             color: #ffffff;
             font-family: Arial, sans-serif;
             padding: 20px;
+            /* ВОТ ТУТ МЕНЯЙ ЧИСЛО, ЧТОБЫ ОПУСКАТЬ ИЛИ ПОДНИМАТЬ ВСЁ ПРИЛОЖЕНИЕ */
+            padding-top: 45px; 
             margin: 0;
         }
         .header-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap; /* Позволяет кнопкам переноситься, чтобы не наезжать на текст */
+            gap: 15px;
             margin-bottom: 20px;
         }
         h2 {
@@ -424,7 +428,7 @@
             
             const select = document.getElementById('daySelect');
             const dayIdx = select.value;
-            if (!dayIdx) return; // Защита до инициализации
+            if (!dayIdx) return;
 
             const t = i18n[currentLang];
             const dayStr = dayIdx.toString();
