@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Тайм-кард / Timecard</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            margin: 0;
+        }
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #da291c;
+            margin: 0;
+            font-size: 1.3em;
+        }
+        .lang-switch {
+            display: flex;
+            gap: 5px;
+        }
+        .lang-btn {
+            background: #222;
+            color: #888;
+            border: 1px solid #444;
+            padding: 6px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            width: auto;
+            margin-top: 0;
+        }
+        .lang-btn.active {
+            background: #da291c;
+            color: #fff;
+            border-color: #da291c;
+        }
+        label {
+            display: block;
+            margin-top: 15px;
+            font-size: 14px;
+            color: #ccc;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 5px;
+            box-sizing: border-box;
+            background: #222;
+            color: #fff;
+            border: 1px solid #444;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #da291c;
+        }
+        .add-btn {
+            background-color: #da291c;
+            color: white;
+            font-weight: bold;
+            border: none;
+            margin-top: 20px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .add-btn:active {
+            background-color: #b52217;
+        }
+        .add-btn.edit-mode {
+            background-color: #d4af37;
+            color: #000;
+        }
+        .task-list {
+            margin-top: 25px;
+        }
+        .day-group {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #da291c;
+        }
+        .day-title {
+            color: #da291c;
+            margin: 0 0 10px 0;
+            font-size: 1.1em;
+            border-bottom: 1px solid #333;
+            padding-bottom: 8px;
+        }
+        .main-task-group {
+            background: #2a2a2a;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            padding: 10px;
+        }
+        .main-task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #444;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+        }
+        .main-task-name {
+            font-size: 1.05em;
+            font-weight: bold;
+            color: #e0e0e0;
+            word-break: break-word;
+        }
+        .main-task-total {
+            color: #da291c;
+            font-weight: bold;
+            white-space: nowrap;
+            margin-left: 10px;
+        }
+        .sub-task-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px dashed #444;
+        }
+        .sub-task-item:last-of-type {
+            border-bottom: none;
+        }
+        .sub-task-name {
+            flex-grow: 1;
+            color: #bbb;
+            font-size: 0.95em;
+            padding-right: 10px;
+            word-break: break-word;
+        }
+        .task-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+        .task-hours {
+            font-weight: bold;
+            color: #fff;
+            margin-right: 5px;
+        }
+        .icon-btn {
+            background-color: #333;
+            border: none;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin: 0;
+            padding: 0;
+            font-size: 16px;
+        }
+        .edit-btn { color: #d4af37; }
+        .delete-btn { color: #da291c; }
+        .icon-btn:active { background-color: #555; }
+        .add-sub-btn {
+            background: transparent;
+            border: 1px dashed #555;
+            color: #aaa;
+            width: 100%;
+            padding: 8px;
+            margin-top: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .add-sub-btn:active {
+            border-color: #da291c;
+            color: #da291c;
+            background: #333;
+        }
+        .total-hours {
+            font-weight: bold;
+            margin-top: 15px;
+            color: #aaa;
+            text-align: right;
+            border-top: 1px solid #444;
+            padding-top: 10px;
+        }
+        .reset-btn {
+            background-color: #444;
+            color: #ccc;
+            margin-top: 30px;
+            border: none;
+            cursor: pointer;
+        }
+        .reset-btn:active { background-color: #333; }
+    </style>
+</head>
+<body>
+
+    <div class="header-bar">
+        <h2 id="appTitle">Робочий табель</h2>
+        <div class="lang-switch">
+            <button class="lang-btn" id="btn-uk" onclick="setLanguage('uk')">UA</button>
+            <button class="lang-btn" id="btn-en" onclick="setLanguage('en')">EN</button>
+            <button class="lang-btn" id="btn-ru" onclick="setLanguage('ru')">RU</button>
+        </div>
+    </div>
+    
+    <label for="daySelect" id="labelDay">День тижня:</label>
+    <select id="daySelect"></select>
+
+    <label for="taskInput" id="labelTask">Що робив? (Головна робота)</label>
+    <input type="text" id="taskInput" list="taskSuggestions">
+    <datalist id="taskSuggestions"></datalist>
+
+    <label for="subTaskInput" id="labelSubTask">Деталі / Підгрупа (необов'язково):</label>
+    <input type="text" id="subTaskInput">
+
+    <label for="hoursInput" id="labelHours">Час (0.25 = 15 хв, 0.5 = 30 хв, 1 = 1 год):</label>
+    <input type="number" id="hoursInput" step="0.25" min="0.25">
+
+    <button class="add-btn" id="addBtn" onclick="addOrUpdateTask()">Додати запис</button>
+
+    <div class="task-list" id="taskList"></div>
+
+    <button class="reset-btn" id="resetBtn" onclick="resetData()">Скинути все (для нового тижня)</button>
+
+    <script>
+        const i18n = {
+            uk: {
+                title: "Робочий табель",
+                dayLabel: "День тижня:",
+                days: ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"],
+                taskLabel: "Що робив? (Головна робота)",
+                taskPlaceholder: "Наприклад: Боксінг, Прокладка кабелю",
+                subTaskLabel: "Деталі / Підгрупа (необов'язково):",
+                subTaskPlaceholder: "Наприклад: 1 поверх, кімната 2",
+                hoursLabel: "Час (0.25 = 15 хв, 0.5 = 30 хв, 1 = 1 год):",
+                addBtn: "Додати запис",
+                saveBtn: "Зберегти зміни",
+                addSubBtn: "+ Додати сюди",
+                noSubDetails: "Основна робота",
+                totalDay: "Усього за день:",
+                resetBtn: "Скинути все (для нового тижня)",
+                alertNoDesc: "Будь ласка, напиши, що ти робив.",
+                alertNoHours: "Вкажи коректний час (наприклад, 0.25, 0.5, 1).",
+                confirmReset: "Видалити всі записи за тиждень?",
+                unit: "год."
+            },
+            en: {
+                title: "Work Timecard",
+                dayLabel: "Day of the week:",
+                days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+                taskLabel: "Main Task:",
+                taskPlaceholder: "E.g.: Boxing, Pulling wire",
+                subTaskLabel: "Details / Sub-group (optional):",
+                subTaskPlaceholder: "E.g.: 1st floor, room 2",
+                hoursLabel: "Time (0.25 = 15m, 0.5 = 30m, 1 = 1h):",
+                addBtn: "Add entry",
+                saveBtn: "Save changes",
+                addSubBtn: "+ Add here",
+                noSubDetails: "Main work",
+                totalDay: "Total for day:",
+                resetBtn: "Reset all (for new week)",
+                alertNoDesc: "Please describe what you did.",
+                alertNoHours: "Enter valid hours (e.g., 0.25, 0.5, 1).",
+                confirmReset: "Delete all entries for the week?",
+                unit: "hrs"
+            },
+            ru: {
+                title: "Рабочий табель",
+                dayLabel: "День недели:",
+                days: ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"],
+                taskLabel: "Что делал? (Главная работа)",
+                taskPlaceholder: "Например: Боксинг, Протяжка",
+                subTaskLabel: "Детали / Подгруппа (необязательно):",
+                subTaskPlaceholder: "Например: 1 этаж, комната",
+                hoursLabel: "Время (0.25 = 15 мин, 0.5 = 30 мин, 1 = 1 час):",
+                addBtn: "Добавить запись",
+                saveBtn: "Сохранить изменения",
+                addSubBtn: "+ Добавить сюда",
+                noSubDetails: "Основная работа",
+                totalDay: "Итого за день:",
+                resetBtn: "Сбросить всё (для новой недели)",
+                alertNoDesc: "Пожалуйста, напиши, что ты делал.",
+                alertNoHours: "Укажи корректное время.",
+                confirmReset: "Удалить все записи за неделю?",
+                unit: "ч."
+            }
+        };
+
+        let currentLang = localStorage.getItem('timecardLang') || 'uk';
+        
+        // Новая структура данных: timecardData[dayIdx][mainTask] = [ { subDesc, hours }, ... ]
+        let timecardData = JSON.parse(localStorage.getItem('timecardGroupedData')) || {};
+        
+        // Миграция со старого формата (если у тебя оставались старые записи до группировки)
+        const oldData = JSON.parse(localStorage.getItem('timecardIndexedData'));
+        if (oldData) {
+            for (let d in oldData) {
+                if (!timecardData[d]) timecardData[d] = {};
+                oldData[d].forEach(task => {
+                    const main = task.desc || "Без назви";
+                    if (!timecardData[d][main]) timecardData[d][main] = [];
+                    timecardData[d][main].push({ subDesc: task.subDesc || "", hours: task.hours });
+                });
+            }
+            localStorage.removeItem('timecardIndexedData');
+            saveData();
+        }
+
+        let editingDay = null;
+        let editingMainTask = null;
+        let editingSubIdx = null;
+
+        function getCurrentDayIndex() {
+            const today = new Date().getDay();
+            return (today === 0 ? 6 : today - 1).toString();
+        }
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('timecardLang', lang);
+
+            document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${lang}`).classList.add('active');
+
+            const t = i18n[lang];
+            document.getElementById('appTitle').textContent = t.title;
+            document.getElementById('labelDay').textContent = t.dayLabel;
+            document.getElementById('labelTask').textContent = t.taskLabel;
+            document.getElementById('taskInput').placeholder = t.taskPlaceholder;
+            document.getElementById('labelSubTask').textContent = t.subTaskLabel;
+            document.getElementById('subTaskInput').placeholder = t.subTaskPlaceholder;
+            document.getElementById('labelHours').textContent = t.hoursLabel;
+            
+            const addBtn = document.getElementById('addBtn');
+            addBtn.textContent = (editingDay !== null) ? t.saveBtn : t.addBtn;
+            document.getElementById('resetBtn').textContent = t.resetBtn;
+
+            const select = document.getElementById('daySelect');
+            const selectedIdx = select.value !== "" ? select.value : getCurrentDayIndex();
+            select.innerHTML = '';
+            t.days.forEach((dayName, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.textContent = dayName;
+                select.appendChild(opt);
+            });
+            select.value = selectedIdx;
+
+            renderTasks();
+        }
+
+        function updateDatalist() {
+            const datalist = document.getElementById('taskSuggestions');
+            datalist.innerHTML = '';
+            const uniqueTasks = new Set();
+            
+            for (let dayIdx in timecardData) {
+                for (let mainTask in timecardData[dayIdx]) {
+                    uniqueTasks.add(mainTask);
+                }
+            }
+            uniqueTasks.forEach(taskName => {
+                const opt = document.createElement('option');
+                opt.value = taskName;
+                datalist.appendChild(opt);
+            });
+        }
+
+        function renderTasks() {
+            const taskList = document.getElementById('taskList');
+            taskList.innerHTML = '';
+            const t = i18n[currentLang];
+
+            for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+                const dayStr = dayIdx.toString();
+                const dayTasks = timecardData[dayStr];
+                
+                if (dayTasks && Object.keys(dayTasks).length > 0) {
+                    const dayGroup = document.createElement('div');
+                    dayGroup.className = 'day-group';
+                    let html = `<h3 class="day-title">${t.days[dayIdx]}</h3>`;
+                    let dayTotalHours = 0;
+
+                    for (let mainTask in dayTasks) {
+                        let mainTaskTotal = 0;
+                        let subTasksHtml = '';
+
+                        dayTasks[mainTask].forEach((sub, index) => {
+                            mainTaskTotal += parseFloat(sub.hours);
+                            const displayName = sub.subDesc ? sub.subDesc : `<i>${t.noSubDetails}</i>`;
+                            
+                            subTasksHtml += `
+                                <div class="sub-task-item">
+                                    <div class="sub-task-name">${displayName}</div>
+                                    <div class="task-controls">
+                                        <span class="task-hours">${sub.hours} ${t.unit}</span>
+                                        <button class="icon-btn edit-btn" onclick="editTask('${dayStr}', '${mainTask.replace(/'/g, "\\'")}', ${index})">✎</button>
+                                        <button class="icon-btn delete-btn" onclick="deleteTask('${dayStr}', '${mainTask.replace(/'/g, "\\'")}', ${index})">✕</button>
+                                    </div>
+                                </div>
+                            `;
+                        });
+
+                        dayTotalHours += mainTaskTotal;
+
+                        html += `
+                            <div class="main-task-group">
+                                <div class="main-task-header">
+                                    <span class="main-task-name">${mainTask}</span>
+                                    <span class="main-task-total">${mainTaskTotal} ${t.unit}</span>
+                                </div>
+                                <div class="sub-task-list">
+                                    ${subTasksHtml}
+                                </div>
+                                <button class="add-sub-btn" onclick="prefillSubTask('${dayStr}', '${mainTask.replace(/'/g, "\\'")}')">${t.addSubBtn}</button>
+                            </div>
+                        `;
+                    }
+
+                    html += `<div class="total-hours">${t.totalDay} ${dayTotalHours} ${t.unit}</div>`;
+                    dayGroup.innerHTML = html;
+                    taskList.appendChild(dayGroup);
+                }
+            }
+            updateDatalist();
+        }
+
+        function addOrUpdateTask() {
+            const dayIdx = document.getElementById('daySelect').value;
+            const desc = document.getElementById('taskInput').value.trim();
+            const subDesc = document.getElementById('subTaskInput').value.trim();
+            const hours = parseFloat(document.getElementById('hoursInput').value);
+            const t = i18n[currentLang];
+
+            if (!desc) {
+                alert(t.alertNoDesc);
+                return;
+            }
+            if (isNaN(hours) || hours <= 0) {
+                alert(t.alertNoHours);
+                return;
+            }
+
+            // Если сохраняем редактирование - удаляем старую запись
+            if (editingDay !== null) {
+                timecardData[editingDay][editingMainTask].splice(editingSubIdx, 1);
+                // Очищаем пустую группу, если удалили последнюю подгруппу
+                if (timecardData[editingDay][editingMainTask].length === 0) {
+                    delete timecardData[editingDay][editingMainTask];
+                }
+                cancelEditMode();
+            }
+
+            // Добавляем новую или обновленную запись
+            if (!timecardData[dayIdx]) timecardData[dayIdx] = {};
+            if (!timecardData[dayIdx][desc]) timecardData[dayIdx][desc] = [];
+            
+            timecardData[dayIdx][desc].push({ subDesc: subDesc, hours: hours });
+
+            saveData();
+            clearInputs();
+        }
+
+        function prefillSubTask(dayIdx, mainTask) {
+            cancelEditMode(); // На всякий случай сбрасываем режим редактирования
+            
+            document.getElementById('daySelect').value = dayIdx;
+            document.getElementById('taskInput').value = mainTask;
+            document.getElementById('subTaskInput').value = '';
+            document.getElementById('hoursInput').value = '';
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.getElementById('subTaskInput').focus();
+        }
+
+        function editTask(dayIdx, mainTask, index) {
+            const sub = timecardData[dayIdx][mainTask][index];
+            const t = i18n[currentLang];
+            
+            document.getElementById('daySelect').value = dayIdx;
+            document.getElementById('taskInput').value = mainTask;
+            document.getElementById('subTaskInput').value = sub.subDesc || '';
+            document.getElementById('hoursInput').value = sub.hours;
+            
+            editingDay = dayIdx;
+            editingMainTask = mainTask;
+            editingSubIdx = index;
+            
+            const addBtn = document.getElementById('addBtn');
+            addBtn.textContent = t.saveBtn;
+            addBtn.classList.add('edit-mode');
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function deleteTask(dayIdx, mainTask, index) {
+            // Если пытаемся удалить то, что сейчас редактируем - отменяем редактирование
+            if (editingDay === dayIdx && editingMainTask === mainTask && editingSubIdx === index) {
+                cancelEditMode();
+                clearInputs();
+            }
+
+            timecardData[dayIdx][mainTask].splice(index, 1);
+            if (timecardData[dayIdx][mainTask].length === 0) {
+                delete timecardData[dayIdx][mainTask];
+            }
+            saveData();
+        }
+
+        function resetData() {
+            if (confirm(i18n[currentLang].confirmReset)) {
+                timecardData = {};
+                cancelEditMode();
+                clearInputs();
+                saveData();
+            }
+        }
+
+        function cancelEditMode() {
+            editingDay = null;
+            editingMainTask = null;
+            editingSubIdx = null;
+            const addBtn = document.getElementById('addBtn');
+            addBtn.textContent = i18n[currentLang].addBtn;
+            addBtn.classList.remove('edit-mode');
+        }
+
+        function clearInputs() {
+            document.getElementById('taskInput').value = '';
+            document.getElementById('subTaskInput').value = '';
+            document.getElementById('hoursInput').value = '';
+        }
+
+        function saveData() {
+            localStorage.setItem('timecardGroupedData', JSON.stringify(timecardData));
+            renderTasks();
+        }
+
+        // Запуск
+        setLanguage(currentLang);
+    </script>
+</body>
+</html>
