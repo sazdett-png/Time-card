@@ -216,6 +216,23 @@
             border-top: 1px solid #444;
             padding-top: 10px;
         }
+        .weekly-total {
+            text-align: center;
+            font-size: 1.1em;
+            color: #fff;
+            margin-top: 20px;
+            padding: 12px;
+            background: #1e1e1e;
+            border-radius: 8px;
+            border: 1px solid #da291c;
+            font-weight: bold;
+        }
+        .empty-day {
+            text-align: center; 
+            color: #777; 
+            margin-top: 30px; 
+            margin-bottom: 20px;
+        }
         .reset-btn {
             background-color: #444;
             color: #ccc;
@@ -238,7 +255,7 @@
     </div>
     
     <label for="daySelect" id="labelDay">День тижня:</label>
-    <select id="daySelect"></select>
+    <select id="daySelect" onchange="renderTasks()"></select>
 
     <label for="taskInput" id="labelTask">Що робив? (Головна робота)</label>
     <input type="text" id="taskInput" list="taskSuggestions">
@@ -256,6 +273,7 @@
     </div>
 
     <div class="task-list" id="taskList"></div>
+    <div class="weekly-total" id="weeklyTotal" style="display: none;"></div>
 
     <button class="reset-btn" id="resetBtn" onclick="resetData()">Скинути все (для нового тижня)</button>
 
@@ -277,6 +295,8 @@
                 addSubBtn: "+ Додати сюди",
                 noSubDetails: "Основна робота",
                 totalDay: "Усього за день:",
+                weeklyTotal: "Разом за тиждень:",
+                noTasks: "Немає записів на цей день",
                 resetBtn: "Скинути все (для нового тижня)",
                 alertNoDesc: "Будь ласка, напиши, що ти робив.",
                 alertNoHours: "Вкажи коректний час (наприклад, 0.25, 0.5, 1).",
@@ -299,6 +319,8 @@
                 addSubBtn: "+ Add here",
                 noSubDetails: "Main work",
                 totalDay: "Total for day:",
+                weeklyTotal: "Weekly total:",
+                noTasks: "No entries for this day",
                 resetBtn: "Reset all (for new week)",
                 alertNoDesc: "Please describe what you did.",
                 alertNoHours: "Enter valid hours (e.g., 0.25, 0.5, 1).",
@@ -321,6 +343,8 @@
                 addSubBtn: "+ Добавить сюда",
                 noSubDetails: "Основная работа",
                 totalDay: "Итого за день:",
+                weeklyTotal: "Всего за неделю:",
+                noTasks: "Нет записей на этот день",
                 resetBtn: "Сбросить всё (для новой недели)",
                 alertNoDesc: "Пожалуйста, напиши, что ты делал.",
                 alertNoHours: "Укажи корректное время.",
@@ -397,60 +421,87 @@
         function renderTasks() {
             const taskList = document.getElementById('taskList');
             taskList.innerHTML = '';
+            
+            const select = document.getElementById('daySelect');
+            const dayIdx = select.value;
+            if (!dayIdx) return; // Защита до инициализации
+
             const t = i18n[currentLang];
+            const dayStr = dayIdx.toString();
+            const dayTasks = timecardData[dayStr];
+            
+            if (dayTasks && Object.keys(dayTasks).length > 0) {
+                const dayGroup = document.createElement('div');
+                dayGroup.className = 'day-group';
+                let html = `<h3 class="day-title">${t.days[dayIdx]}</h3>`;
+                let dayTotalHours = 0;
 
-            for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
-                const dayStr = dayIdx.toString();
-                const dayTasks = timecardData[dayStr];
-                
-                if (dayTasks && Object.keys(dayTasks).length > 0) {
-                    const dayGroup = document.createElement('div');
-                    dayGroup.className = 'day-group';
-                    let html = `<h3 class="day-title">${t.days[dayIdx]}</h3>`;
-                    let dayTotalHours = 0;
+                for (let mainTask in dayTasks) {
+                    let mainTaskTotal = 0;
+                    let subTasksHtml = '';
 
-                    for (let mainTask in dayTasks) {
-                        let mainTaskTotal = 0;
-                        let subTasksHtml = '';
-
-                        dayTasks[mainTask].forEach((sub, index) => {
-                            mainTaskTotal += parseFloat(sub.hours);
-                            const displayName = sub.subDesc ? sub.subDesc : `<i>${t.noSubDetails}</i>`;
-                            
-                            subTasksHtml += `
-                                <div class="sub-task-item">
-                                    <div class="sub-task-name">${displayName}</div>
-                                    <div class="task-controls">
-                                        <span class="task-hours">${sub.hours} ${t.unit}</span>
-                                        <button class="icon-btn edit-btn" onclick="editTask('${dayStr}', '${mainTask.replace(/'/g, "\\'")}', ${index})">✎</button>
-                                        <button class="icon-btn delete-btn" onclick="deleteTask('${dayStr}', '${mainTask.replace(/'/g, "\\'")}', ${index})">✕</button>
-                                    </div>
+                    dayTasks[mainTask].forEach((sub, index) => {
+                        mainTaskTotal += parseFloat(sub.hours);
+                        const displayName = sub.subDesc ? sub.subDesc : `<i>${t.noSubDetails}</i>`;
+                        
+                        subTasksHtml += `
+                            <div class="sub-task-item">
+                                <div class="sub-task-name">${displayName}</div>
+                                <div class="task-controls">
+                                    <span class="task-hours">${sub.hours} ${t.unit}</span>
+                                    <button class="icon-btn edit-btn" onclick="editTask('${dayStr}', '${mainTask.replace(/'/g, "\\'")}', ${index})">✎</button>
+                                    <button class="icon-btn delete-btn" onclick="deleteTask('${dayStr}', '${mainTask.replace(/'/g, "\\'")}', ${index})">✕</button>
                                 </div>
-                            `;
-                        });
-
-                        dayTotalHours += mainTaskTotal;
-
-                        html += `
-                            <div class="main-task-group">
-                                <div class="main-task-header">
-                                    <span class="main-task-name">${mainTask}</span>
-                                    <span class="main-task-total">${mainTaskTotal} ${t.unit}</span>
-                                </div>
-                                <div class="sub-task-list">
-                                    ${subTasksHtml}
-                                </div>
-                                <button class="add-sub-btn" onclick="prefillSubTask('${dayStr}', '${mainTask.replace(/'/g, "\\'")}')">${t.addSubBtn}</button>
                             </div>
                         `;
-                    }
+                    });
 
-                    html += `<div class="total-hours">${t.totalDay} ${dayTotalHours} ${t.unit}</div>`;
-                    dayGroup.innerHTML = html;
-                    taskList.appendChild(dayGroup);
+                    dayTotalHours += mainTaskTotal;
+
+                    html += `
+                        <div class="main-task-group">
+                            <div class="main-task-header">
+                                <span class="main-task-name">${mainTask}</span>
+                                <span class="main-task-total">${mainTaskTotal} ${t.unit}</span>
+                            </div>
+                            <div class="sub-task-list">
+                                ${subTasksHtml}
+                            </div>
+                            <button class="add-sub-btn" onclick="prefillSubTask('${dayStr}', '${mainTask.replace(/'/g, "\\'")}')">${t.addSubBtn}</button>
+                        </div>
+                    `;
+                }
+
+                html += `<div class="total-hours">${t.totalDay} ${dayTotalHours} ${t.unit}</div>`;
+                dayGroup.innerHTML = html;
+                taskList.appendChild(dayGroup);
+            } else {
+                taskList.innerHTML = `<div class="empty-day">${t.noTasks}</div>`;
+            }
+
+            updateDatalist();
+            updateWeeklyTotal();
+        }
+
+        function updateWeeklyTotal() {
+            let weeklyHours = 0;
+            for (let d in timecardData) {
+                for (let m in timecardData[d]) {
+                    timecardData[d][m].forEach(sub => {
+                        weeklyHours += parseFloat(sub.hours);
+                    });
                 }
             }
-            updateDatalist();
+            
+            const t = i18n[currentLang];
+            const wtDiv = document.getElementById('weeklyTotal');
+            
+            if (weeklyHours > 0) {
+                wtDiv.style.display = 'block';
+                wtDiv.textContent = `${t.weeklyTotal} ${weeklyHours} ${t.unit}`;
+            } else {
+                wtDiv.style.display = 'none';
+            }
         }
 
         function addOrUpdateTask() {
