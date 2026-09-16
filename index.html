@@ -65,7 +65,6 @@
             font-size: 16px;
         }
         input[type="time"] {
-            /* Оставляем нативный виджет времени для мобильных */
             appearance: none;
         }
         input:focus, select:focus {
@@ -93,32 +92,28 @@
             font-weight: bold;
             color: #d4af37;
         }
+        
+        /* Сетка для кнопок */
         .action-buttons {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 10px;
             margin-top: 20px;
         }
-        .action-buttons button {
-            margin-top: 0;
-        }
         .add-btn {
-            flex: 2;
+            grid-column: span 2;
             background-color: #da291c;
             color: white;
             font-weight: bold;
             border: none;
             cursor: pointer;
             transition: background-color 0.2s;
+            margin-top: 0;
         }
-        .add-btn:active {
-            background-color: #b52217;
-        }
-        .add-btn.edit-mode {
-            background-color: #d4af37;
-            color: #000;
-        }
-        .break-btn {
-            flex: 1;
+        .add-btn:active { background-color: #b52217; }
+        .add-btn.edit-mode { background-color: #d4af37; color: #000; }
+        
+        .quick-btn {
             background-color: #333;
             color: #ddd;
             border: 1px solid #555;
@@ -126,10 +121,14 @@
             cursor: pointer;
             transition: background-color 0.2s;
             white-space: nowrap;
+            margin-top: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 12px 5px;
         }
-        .break-btn:active {
-            background-color: #555;
-        }
+        .quick-btn:active { background-color: #555; }
+
         .task-list {
             margin-top: 25px;
         }
@@ -166,6 +165,9 @@
             font-weight: bold;
             color: #e0e0e0;
             word-break: break-word;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
         }
         .main-task-total {
             color: #da291c;
@@ -173,6 +175,33 @@
             white-space: nowrap;
             margin-left: 10px;
         }
+        
+        /* Стили для неоплачиваемых задач (Ланч) */
+        .unpaid-task-group {
+            background: #181818;
+            border: 1px dashed #444;
+        }
+        .unpaid-task-group .main-task-name {
+            color: #888;
+        }
+        .unpaid-task-group .main-task-total {
+            color: #666;
+        }
+        .unpaid-badge {
+            font-size: 0.7em;
+            background: #333;
+            color: #aaa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+            font-weight: normal;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .unpaid-sub-item {
+            opacity: 0.6;
+        }
+
         .sub-task-item {
             display: flex;
             justify-content: space-between;
@@ -305,7 +334,8 @@
 
     <div class="action-buttons">
         <button class="add-btn" id="addBtn" onclick="addOrUpdateTask()">Додати запис</button>
-        <button class="break-btn" id="breakBtn" onclick="addQuickBreak()">☕ Перерва (0.5)</button>
+        <button class="quick-btn" id="breakBtn" onclick="addQuickBreak()">☕ Перерва (0.5)</button>
+        <button class="quick-btn" id="lunchBtn" onclick="addQuickLunch()">🍔 Ланч (0.5)</button>
     </div>
 
     <div class="task-list" id="taskList"></div>
@@ -330,10 +360,13 @@
                 saveBtn: "Зберегти зміни",
                 breakBtn: "☕ Перерва (0.5)",
                 breakName: "Перерва",
+                lunchBtn: "🍔 Ланч (0.5)",
+                lunchName: "Ланч",
+                unpaidLabel: "неоплач.",
                 addSubBtn: "+ Додати сюди",
                 noSubDetails: "Основна робота",
-                totalDay: "Усього за день:",
-                weeklyTotal: "Разом за тиждень:",
+                totalDay: "Усього за день (оплачується):",
+                weeklyTotal: "Разом за тиждень (оплачується):",
                 noTasks: "Немає записів на цей день",
                 resetBtn: "Скинути все (для нового тижня)",
                 alertNoDesc: "Будь ласка, напиши, що ти робив.",
@@ -356,10 +389,13 @@
                 saveBtn: "Save changes",
                 breakBtn: "☕ Break (0.5)",
                 breakName: "Break",
+                lunchBtn: "🍔 Lunch (0.5)",
+                lunchName: "Lunch",
+                unpaidLabel: "unpaid",
                 addSubBtn: "+ Add here",
                 noSubDetails: "Main work",
-                totalDay: "Total for day:",
-                weeklyTotal: "Weekly total:",
+                totalDay: "Total for day (paid):",
+                weeklyTotal: "Weekly total (paid):",
                 noTasks: "No entries for this day",
                 resetBtn: "Reset all (for new week)",
                 alertNoDesc: "Please describe what you did.",
@@ -382,10 +418,13 @@
                 saveBtn: "Сохранить изменения",
                 breakBtn: "☕ Перерыв (0.5)",
                 breakName: "Перерыв",
+                lunchBtn: "🍔 Ланч (0.5)",
+                lunchName: "Ланч",
+                unpaidLabel: "неоплач.",
                 addSubBtn: "+ Добавить сюда",
                 noSubDetails: "Основная работа",
-                totalDay: "Итого за день:",
-                weeklyTotal: "Всего за неделю:",
+                totalDay: "Итого за день (оплачивается):",
+                weeklyTotal: "Всего за неделю (оплачивается):",
                 noTasks: "Нет записей на этот день",
                 resetBtn: "Сбросить всё (для новой недели)",
                 alertNoDesc: "Пожалуйста, напиши, что ты делал.",
@@ -404,6 +443,7 @@
         let editingDay = null;
         let editingMainTask = null;
         let editingSubIdx = null;
+        let editingUnpaid = false;
 
         function getCurrentDayIndex() {
             const today = new Date().getDay();
@@ -432,6 +472,7 @@
             addBtn.textContent = (editingDay !== null) ? t.saveBtn : t.addBtn;
             
             document.getElementById('breakBtn').textContent = t.breakBtn;
+            document.getElementById('lunchBtn').textContent = t.lunchBtn;
             document.getElementById('resetBtn').textContent = t.resetBtn;
 
             const select = document.getElementById('daySelect');
@@ -456,7 +497,7 @@
             }
             shiftStart = val;
             localStorage.setItem('timecardShiftStart', shiftStart);
-            renderTasks(); // Пересчитываем часы
+            renderTasks();
         }
 
         function updateDatalist() {
@@ -476,12 +517,10 @@
             });
         }
 
-        function updateTrackerTime(dayTotalHours) {
+        function updateTrackerTime(dayTotalTrackerHours) {
             const [startH, startM] = shiftStart.split(':').map(Number);
-            
-            // Преобразуем десятичные часы в целые часы и минуты
-            const addH = Math.floor(dayTotalHours);
-            const addM = Math.round((dayTotalHours - addH) * 60);
+            const addH = Math.floor(dayTotalTrackerHours);
+            const addM = Math.round((dayTotalTrackerHours - addH) * 60);
             
             let finalH = startH + addH;
             let finalM = startM + addM;
@@ -512,7 +551,8 @@
             const dayStr = dayIdx.toString();
             const dayTasks = timecardData[dayStr];
             
-            let dayTotalHours = 0;
+            let dayPaidHours = 0;
+            let dayTrackerHours = 0;
 
             if (dayTasks && Object.keys(dayTasks).length > 0) {
                 const dayGroup = document.createElement('div');
@@ -520,18 +560,35 @@
                 let html = `<h3 class="day-title">${t.days[dayIdx]}</h3>`;
 
                 for (let mainTask in dayTasks) {
-                    let mainTaskTotal = 0;
+                    let mainTaskPaid = 0;
                     let subTasksHtml = '';
+                    let isFullyUnpaid = true;
+
+                    // Проверяем, есть ли хоть одна оплачиваемая подзадача в этой группе
+                    dayTasks[mainTask].forEach((sub) => {
+                        if (!sub.unpaid) isFullyUnpaid = false;
+                    });
 
                     dayTasks[mainTask].forEach((sub, index) => {
-                        mainTaskTotal += parseFloat(sub.hours);
+                        const h = parseFloat(sub.hours);
+                        dayTrackerHours += h;
+                        
+                        let hourDisplay;
+                        if (sub.unpaid) {
+                            hourDisplay = `<span style="color:#aaa;">${sub.hours} ${t.unit}</span>`;
+                        } else {
+                            mainTaskPaid += h;
+                            hourDisplay = `${sub.hours} ${t.unit}`;
+                        }
+
                         const displayName = sub.subDesc ? sub.subDesc : `<i>${t.noSubDetails}</i>`;
+                        const subClass = sub.unpaid ? "sub-task-item unpaid-sub-item" : "sub-task-item";
                         
                         subTasksHtml += `
-                            <div class="sub-task-item">
+                            <div class="${subClass}">
                                 <div class="sub-task-name">${displayName}</div>
                                 <div class="task-controls">
-                                    <span class="task-hours">${sub.hours} ${t.unit}</span>
+                                    <span class="task-hours">${hourDisplay}</span>
                                     <button class="icon-btn edit-btn" onclick="editTask('${dayStr}', '${mainTask.replace(/'/g, "\\'")}', ${index})">✎</button>
                                     <button class="icon-btn delete-btn" onclick="deleteTask('${dayStr}', '${mainTask.replace(/'/g, "\\'")}', ${index})">✕</button>
                                 </div>
@@ -539,13 +596,17 @@
                         `;
                     });
 
-                    dayTotalHours += mainTaskTotal;
+                    dayPaidHours += mainTaskPaid;
+
+                    // Применяем специальные стили, если вся группа состоит из неоплачиваемых задач
+                    const groupClass = isFullyUnpaid ? "main-task-group unpaid-task-group" : "main-task-group";
+                    const badgeHtml = isFullyUnpaid ? `<span class="unpaid-badge">${t.unpaidLabel}</span>` : '';
 
                     html += `
-                        <div class="main-task-group">
+                        <div class="${groupClass}">
                             <div class="main-task-header">
-                                <span class="main-task-name">${mainTask}</span>
-                                <span class="main-task-total">${mainTaskTotal} ${t.unit}</span>
+                                <span class="main-task-name">${mainTask} ${badgeHtml}</span>
+                                <span class="main-task-total">${mainTaskPaid} ${t.unit}</span>
                             </div>
                             <div class="sub-task-list">
                                 ${subTasksHtml}
@@ -555,16 +616,14 @@
                     `;
                 }
 
-                html += `<div class="total-hours">${t.totalDay} ${dayTotalHours} ${t.unit}</div>`;
+                html += `<div class="total-hours">${t.totalDay} ${dayPaidHours} ${t.unit}</div>`;
                 dayGroup.innerHTML = html;
                 taskList.appendChild(dayGroup);
             } else {
                 taskList.innerHTML = `<div class="empty-day">${t.noTasks}</div>`;
             }
 
-            // Обновляем желтую панель со временем
-            updateTrackerTime(dayTotalHours);
-            
+            updateTrackerTime(dayTrackerHours);
             updateDatalist();
             updateWeeklyTotal();
         }
@@ -574,7 +633,9 @@
             for (let d in timecardData) {
                 for (let m in timecardData[d]) {
                     timecardData[d][m].forEach(sub => {
-                        weeklyHours += parseFloat(sub.hours);
+                        if (!sub.unpaid) {
+                            weeklyHours += parseFloat(sub.hours);
+                        }
                     });
                 }
             }
@@ -606,7 +667,10 @@
                 return;
             }
 
+            let isUnpaid = false;
+
             if (editingDay !== null) {
+                isUnpaid = editingUnpaid; 
                 timecardData[editingDay][editingMainTask].splice(editingSubIdx, 1);
                 if (timecardData[editingDay][editingMainTask].length === 0) {
                     delete timecardData[editingDay][editingMainTask];
@@ -617,7 +681,7 @@
             if (!timecardData[dayIdx]) timecardData[dayIdx] = {};
             if (!timecardData[dayIdx][desc]) timecardData[dayIdx][desc] = [];
             
-            timecardData[dayIdx][desc].push({ subDesc: subDesc, hours: hours });
+            timecardData[dayIdx][desc].push({ subDesc: subDesc, hours: hours, unpaid: isUnpaid });
 
             saveData();
             clearInputs();
@@ -631,7 +695,19 @@
             if (!timecardData[dayIdx]) timecardData[dayIdx] = {};
             if (!timecardData[dayIdx][breakTaskName]) timecardData[dayIdx][breakTaskName] = [];
             
-            timecardData[dayIdx][breakTaskName].push({ subDesc: "", hours: 0.5 });
+            timecardData[dayIdx][breakTaskName].push({ subDesc: "", hours: 0.5, unpaid: false });
+            saveData();
+        }
+
+        function addQuickLunch() {
+            const dayIdx = document.getElementById('daySelect').value;
+            const t = i18n[currentLang];
+            const lunchTaskName = t.lunchName;
+            
+            if (!timecardData[dayIdx]) timecardData[dayIdx] = {};
+            if (!timecardData[dayIdx][lunchTaskName]) timecardData[dayIdx][lunchTaskName] = [];
+            
+            timecardData[dayIdx][lunchTaskName].push({ subDesc: "", hours: 0.5, unpaid: true });
             saveData();
         }
 
@@ -659,6 +735,7 @@
             editingDay = dayIdx;
             editingMainTask = mainTask;
             editingSubIdx = index;
+            editingUnpaid = sub.unpaid || false;
             
             const addBtn = document.getElementById('addBtn');
             addBtn.textContent = t.saveBtn;
@@ -693,6 +770,7 @@
             editingDay = null;
             editingMainTask = null;
             editingSubIdx = null;
+            editingUnpaid = false;
             const addBtn = document.getElementById('addBtn');
             addBtn.textContent = i18n[currentLang].addBtn;
             addBtn.classList.remove('edit-mode');
