@@ -165,10 +165,30 @@
             return (today === 0 ? 6 : today - 1).toString();
         }
 
+        // Фильтр для красивой даты
+        function formatDisplayDate(dateStr) {
+            if (!dateStr) return "";
+            // Если дата прилетела с лишними английскими буквами (GMT, Mon, Sep)
+            if (/[a-zA-Z]/.test(dateStr) && dateStr.length > 10) {
+                let d = new Date(dateStr);
+                if (!isNaN(d.getTime())) {
+                    let day = d.getDate().toString().padStart(2, '0');
+                    let month = (d.getMonth() + 1).toString().padStart(2, '0');
+                    let year = d.getFullYear();
+                    return `${day}.${month}.${year}`;
+                }
+            }
+            // Если прилетело чистое "01.09.2025 00:00:00", отрезаем нули
+            if (dateStr.includes(" 00:00:00")) {
+                return dateStr.replace(" 00:00:00", "");
+            }
+            return dateStr;
+        }
+
         function syncWithCloud() {
             if (!GOOGLE_WEB_APP_URL) return;
             fetch(GOOGLE_WEB_APP_URL)
-                .then(res => res.text()) // Читаем как текст, чтобы не крашилось
+                .then(res => res.text())
                 .then(text => {
                     try {
                         let data = JSON.parse(text);
@@ -247,8 +267,10 @@
             document.getElementById('archiveTime').textContent = archiveHours.toString();
             const dateEl = document.getElementById('archiveDateDisplay');
             const t = i18n[currentLang];
-            if (archiveStartDate && archiveStartDate.trim() !== "") {
-                dateEl.textContent = `(${t.archiveSince} ${archiveStartDate})`;
+            let cleanDate = formatDisplayDate(archiveStartDate); // Применяем фильтр даты
+            
+            if (cleanDate && cleanDate.trim() !== "") {
+                dateEl.textContent = `(${t.archiveSince} ${cleanDate})`;
                 dateEl.style.color = '#888';
             } else {
                 dateEl.textContent = `(${t.archivePromptHint})`;
@@ -259,7 +281,7 @@
         function editArchiveSettings() {
             const t = i18n[currentLang];
             let newTotal = prompt(t.editArchivePrompt, archiveHours);
-            let newDate = prompt(t.editDatePrompt, archiveStartDate || '');
+            let newDate = prompt(t.editDatePrompt, formatDisplayDate(archiveStartDate) || '');
             
             if (newTotal !== null || newDate !== null) {
                 let url = `${GOOGLE_WEB_APP_URL}?action=setConfig`;
@@ -479,7 +501,6 @@
                                 resetBtn.disabled = false;
                             }
                         } catch (e) {
-                            // Если Гугл прислал старый текст "Success", мы просто сбрасываем локально
                             if (text.trim() === "Success") {
                                 finishReset(t, resetBtn, originalText);
                             } else {
