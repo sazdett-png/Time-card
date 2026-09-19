@@ -10,7 +10,7 @@
             color: #ffffff;
             font-family: Arial, sans-serif;
             padding: 20px;
-            padding-top: 100px; 
+            padding-top: 80px; 
             margin: 0;
         }
         .header-bar {
@@ -93,7 +93,6 @@
             color: #d4af37;
         }
         
-        /* Сетка для кнопок */
         .action-buttons {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -111,6 +110,7 @@
             margin-top: 0;
         }
         .add-btn:active { background-color: #b52217; }
+        .add-btn:disabled { background-color: #555; color: #888; cursor: not-allowed; }
         .add-btn.edit-mode { background-color: #d4af37; color: #000; }
         
         .quick-btn {
@@ -151,7 +151,26 @@
             border-radius: 6px;
             margin-bottom: 12px;
             padding: 10px;
+            border: 1px solid transparent;
         }
+        
+        .main-task-group.unpaid-group {
+            background: #181818;
+            border: 1px dashed #555;
+            border-left: 4px solid #555;
+            opacity: 0.8;
+        }
+        .unpaid-tag {
+            font-size: 0.7em;
+            color: #aaa;
+            border: 1px solid #555;
+            padding: 2px 5px;
+            border-radius: 4px;
+            margin-left: 8px;
+            vertical-align: middle;
+            text-transform: uppercase;
+        }
+
         .main-task-header {
             display: flex;
             justify-content: space-between;
@@ -165,9 +184,6 @@
             font-weight: bold;
             color: #e0e0e0;
             word-break: break-word;
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
         }
         .main-task-total {
             color: #da291c;
@@ -175,33 +191,9 @@
             white-space: nowrap;
             margin-left: 10px;
         }
-        
-        /* Стили для неоплачиваемых задач (Ланч) */
-        .unpaid-task-group {
-            background: #181818;
-            border: 1px dashed #444;
+        .unpaid-group .main-task-total {
+            color: #777;
         }
-        .unpaid-task-group .main-task-name {
-            color: #888;
-        }
-        .unpaid-task-group .main-task-total {
-            color: #666;
-        }
-        .unpaid-badge {
-            font-size: 0.7em;
-            background: #333;
-            color: #aaa;
-            padding: 2px 6px;
-            border-radius: 4px;
-            margin-left: 8px;
-            font-weight: normal;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .unpaid-sub-item {
-            opacity: 0.6;
-        }
-
         .sub-task-item {
             display: flex;
             justify-content: space-between;
@@ -284,6 +276,23 @@
             border: 1px solid #da291c;
             font-weight: bold;
         }
+        .archive-total {
+            text-align: center;
+            font-size: 0.95em;
+            color: #aaa;
+            margin-top: 10px;
+            padding: 10px;
+            background: #1a1a1a;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+        .archive-number {
+            font-weight: bold;
+            color: #4CAF50;
+            cursor: pointer;
+            text-decoration: underline;
+            text-decoration-style: dashed;
+        }
         .empty-day {
             text-align: center; 
             color: #777; 
@@ -298,6 +307,7 @@
             cursor: pointer;
         }
         .reset-btn:active { background-color: #333; }
+        .reset-btn:disabled { background-color: #222; color: #555; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -340,10 +350,19 @@
 
     <div class="task-list" id="taskList"></div>
     <div class="weekly-total" id="weeklyTotal" style="display: none;"></div>
+    
+    <div class="archive-total" id="archiveBlock">
+        <span id="labelArchive">Стаж за весь час:</span> 
+        <span class="archive-number" id="archiveTime" onclick="editArchive()">0</span> <span id="labelArchiveUnit">год.</span>
+    </div>
 
     <button class="reset-btn" id="resetBtn" onclick="resetData()">Скинути все (для нового тижня)</button>
 
     <script>
+        // === ВАЖНО: ВСТАВЬ ССЫЛКУ НА СВОЙ GOOGLE SCRIPT МЕЖДУ КАВЫЧКАМИ ===
+        const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyMVXrHEPtIZb46dNbBJoYP2YRpTOMaxzyBzHwVRuvpQ9T0VEeE0vP2ePSabA2-7HcXQQ/exec"; 
+        // =================================================================
+
         const i18n = {
             uk: {
                 title: "Робочий табель",
@@ -363,15 +382,22 @@
                 lunchBtn: "🍔 Ланч (0.5)",
                 lunchName: "Ланч",
                 unpaidLabel: "неоплач.",
+                unpaidTag: "НЕОПЛАЧ.",
                 addSubBtn: "+ Додати сюди",
                 noSubDetails: "Основна робота",
                 totalDay: "Усього за день (оплачується):",
                 weeklyTotal: "Разом за тиждень (оплачується):",
+                archiveLabel: "Стаж за весь час (історія):",
+                editArchivePrompt: "Введи кількість годин для збереження в історії:",
                 noTasks: "Немає записів на цей день",
                 resetBtn: "Скинути все (для нового тижня)",
                 alertNoDesc: "Будь ласка, напиши, що ти робив.",
                 alertNoHours: "Вкажи коректний час (наприклад, 0.25, 0.5, 1).",
-                confirmReset: "Видалити всі записи за тиждень?",
+                confirmReset: "Видалити всі записи за тиждень? Оплачувані години будуть додані до стажу за весь час.",
+                sending: "Відправка в таблицю... ⏳",
+                sendSuccess: "Успішно! Тиждень закрито, дані відправлені в Google Sheets.",
+                sendError: "Помилка при відправці! Перевір інтернет. Твої дані НЕ були видалені, спробуй пізніше.",
+                emptyError: "Табель порожній, немає чого відправляти.",
                 unit: "год."
             },
             en: {
@@ -392,15 +418,22 @@
                 lunchBtn: "🍔 Lunch (0.5)",
                 lunchName: "Lunch",
                 unpaidLabel: "unpaid",
+                unpaidTag: "UNPAID",
                 addSubBtn: "+ Add here",
                 noSubDetails: "Main work",
                 totalDay: "Total for day (paid):",
                 weeklyTotal: "Weekly total (paid):",
+                archiveLabel: "All-time total (history):",
+                editArchivePrompt: "Enter the number of hours to save in history:",
                 noTasks: "No entries for this day",
                 resetBtn: "Reset all (for new week)",
                 alertNoDesc: "Please describe what you did.",
                 alertNoHours: "Enter valid hours (e.g., 0.25, 0.5, 1).",
-                confirmReset: "Delete all entries for the week?",
+                confirmReset: "Delete all entries for the week? Paid hours will be added to your all-time history.",
+                sending: "Sending to Sheets... ⏳",
+                sendSuccess: "Success! Week closed, data sent to Google Sheets.",
+                sendError: "Network error! Check your connection. Your data was NOT deleted, try again later.",
+                emptyError: "Timecard is empty, nothing to send.",
                 unit: "hrs"
             },
             ru: {
@@ -421,15 +454,22 @@
                 lunchBtn: "🍔 Ланч (0.5)",
                 lunchName: "Ланч",
                 unpaidLabel: "неоплач.",
+                unpaidTag: "НЕОПЛАЧ.",
                 addSubBtn: "+ Добавить сюда",
                 noSubDetails: "Основная работа",
                 totalDay: "Итого за день (оплачивается):",
                 weeklyTotal: "Всего за неделю (оплачивается):",
+                archiveLabel: "Стаж за всё время (история):",
+                editArchivePrompt: "Введи количество часов для сохранения в истории:",
                 noTasks: "Нет записей на этот день",
                 resetBtn: "Сбросить всё (для новой недели)",
                 alertNoDesc: "Пожалуйста, напиши, что ты делал.",
                 alertNoHours: "Укажи корректное время.",
-                confirmReset: "Удалить все записи за неделю?",
+                confirmReset: "Удалить все записи за неделю? Оплачиваемые часы будут добавлены в общий стаж.",
+                sending: "Отправка в таблицу... ⏳",
+                sendSuccess: "Успешно! Неделя закрыта, данные отправлены в Google Sheets.",
+                sendError: "Ошибка отправки! Проверь интернет. Твои данные НЕ были удалены, попробуй позже.",
+                emptyError: "Табель пуст, нечего отправлять.",
                 unit: "ч."
             }
         };
@@ -439,6 +479,8 @@
         
         let shiftStart = localStorage.getItem('timecardShiftStart') || '07:00';
         document.getElementById('shiftStartInput').value = shiftStart;
+
+        let archiveHours = parseFloat(localStorage.getItem('timecardArchiveHours')) || 0;
 
         let editingDay = null;
         let editingMainTask = null;
@@ -474,6 +516,9 @@
             document.getElementById('breakBtn').textContent = t.breakBtn;
             document.getElementById('lunchBtn').textContent = t.lunchBtn;
             document.getElementById('resetBtn').textContent = t.resetBtn;
+            
+            document.getElementById('labelArchive').textContent = t.archiveLabel;
+            document.getElementById('labelArchiveUnit').textContent = t.unit;
 
             const select = document.getElementById('daySelect');
             const selectedIdx = select.value !== "" ? select.value : getCurrentDayIndex();
@@ -487,6 +532,7 @@
             select.value = selectedIdx;
 
             renderTasks();
+            updateArchiveDisplay();
         }
 
         function saveShiftStart() {
@@ -538,6 +584,23 @@
             
             document.getElementById('trackerTime').textContent = `${formattedH}:${formattedM}`;
         }
+        
+        function updateArchiveDisplay() {
+            document.getElementById('archiveTime').textContent = archiveHours.toString();
+        }
+        
+        function editArchive() {
+            const t = i18n[currentLang];
+            let newVal = prompt(t.editArchivePrompt, archiveHours);
+            if (newVal !== null) {
+                newVal = parseFloat(newVal.replace(',', '.'));
+                if (!isNaN(newVal) && newVal >= 0) {
+                    archiveHours = newVal;
+                    localStorage.setItem('timecardArchiveHours', archiveHours);
+                    updateArchiveDisplay();
+                }
+            }
+        }
 
         function renderTasks() {
             const taskList = document.getElementById('taskList');
@@ -562,30 +625,28 @@
                 for (let mainTask in dayTasks) {
                     let mainTaskPaid = 0;
                     let subTasksHtml = '';
-                    let isFullyUnpaid = true;
-
-                    // Проверяем, есть ли хоть одна оплачиваемая подзадача в этой группе
-                    dayTasks[mainTask].forEach((sub) => {
-                        if (!sub.unpaid) isFullyUnpaid = false;
-                    });
+                    let isAllUnpaid = true;
 
                     dayTasks[mainTask].forEach((sub, index) => {
                         const h = parseFloat(sub.hours);
                         dayTrackerHours += h;
                         
+                        if (!sub.unpaid) {
+                            isAllUnpaid = false;
+                            mainTaskPaid += h;
+                        }
+                        
                         let hourDisplay;
                         if (sub.unpaid) {
-                            hourDisplay = `<span style="color:#aaa;">${sub.hours} ${t.unit}</span>`;
+                            hourDisplay = `<span style="color:#777;">${sub.hours} ${t.unit} <small>(${t.unpaidLabel})</small></span>`;
                         } else {
-                            mainTaskPaid += h;
                             hourDisplay = `${sub.hours} ${t.unit}`;
                         }
 
                         const displayName = sub.subDesc ? sub.subDesc : `<i>${t.noSubDetails}</i>`;
-                        const subClass = sub.unpaid ? "sub-task-item unpaid-sub-item" : "sub-task-item";
                         
                         subTasksHtml += `
-                            <div class="${subClass}">
+                            <div class="sub-task-item">
                                 <div class="sub-task-name">${displayName}</div>
                                 <div class="task-controls">
                                     <span class="task-hours">${hourDisplay}</span>
@@ -597,16 +658,16 @@
                     });
 
                     dayPaidHours += mainTaskPaid;
-
-                    // Применяем специальные стили, если вся группа состоит из неоплачиваемых задач
-                    const groupClass = isFullyUnpaid ? "main-task-group unpaid-task-group" : "main-task-group";
-                    const badgeHtml = isFullyUnpaid ? `<span class="unpaid-badge">${t.unpaidLabel}</span>` : '';
+                    
+                    const groupClass = isAllUnpaid ? "main-task-group unpaid-group" : "main-task-group";
+                    const unpaidTagHtml = isAllUnpaid ? `<span class="unpaid-tag">${t.unpaidTag}</span>` : '';
+                    const displayTotal = isAllUnpaid ? '' : `${mainTaskPaid} ${t.unit}`;
 
                     html += `
                         <div class="${groupClass}">
                             <div class="main-task-header">
-                                <span class="main-task-name">${mainTask} ${badgeHtml}</span>
-                                <span class="main-task-total">${mainTaskPaid} ${t.unit}</span>
+                                <span class="main-task-name">${mainTask} ${unpaidTagHtml}</span>
+                                <span class="main-task-total">${displayTotal}</span>
                             </div>
                             <div class="sub-task-list">
                                 ${subTasksHtml}
@@ -628,7 +689,7 @@
             updateWeeklyTotal();
         }
 
-        function updateWeeklyTotal() {
+        function calculateCurrentWeeklyTotal() {
             let weeklyHours = 0;
             for (let d in timecardData) {
                 for (let m in timecardData[d]) {
@@ -639,7 +700,11 @@
                     });
                 }
             }
-            
+            return weeklyHours;
+        }
+
+        function updateWeeklyTotal() {
+            let weeklyHours = calculateCurrentWeeklyTotal();
             const t = i18n[currentLang];
             const wtDiv = document.getElementById('weeklyTotal');
             
@@ -670,7 +735,7 @@
             let isUnpaid = false;
 
             if (editingDay !== null) {
-                isUnpaid = editingUnpaid; 
+                isUnpaid = editingUnpaid;
                 timecardData[editingDay][editingMainTask].splice(editingSubIdx, 1);
                 if (timecardData[editingDay][editingMainTask].length === 0) {
                     delete timecardData[editingDay][editingMainTask];
@@ -757,12 +822,76 @@
             saveData();
         }
 
+        function finishReset(t, resetBtn, originalText) {
+            let weekPaid = calculateCurrentWeeklyTotal();
+            archiveHours += weekPaid;
+            localStorage.setItem('timecardArchiveHours', archiveHours);
+            
+            timecardData = {};
+            cancelEditMode();
+            clearInputs();
+            saveData();
+            updateArchiveDisplay();
+            
+            if(resetBtn) {
+                resetBtn.textContent = originalText;
+                resetBtn.disabled = false;
+            }
+            
+            alert(GOOGLE_WEB_APP_URL ? t.sendSuccess : "Дані скинуто!");
+        }
+
         function resetData() {
-            if (confirm(i18n[currentLang].confirmReset)) {
-                timecardData = {};
-                cancelEditMode();
-                clearInputs();
-                saveData();
+            const t = i18n[currentLang];
+            
+            if (Object.keys(timecardData).length === 0) {
+                alert(t.emptyError);
+                return;
+            }
+            
+            if (confirm(t.confirmReset)) {
+                if (GOOGLE_WEB_APP_URL && GOOGLE_WEB_APP_URL.trim() !== "") {
+                    // Отправка в облако
+                    let payload = [];
+                    let now = new Date().toLocaleString();
+                    
+                    for (let d in timecardData) {
+                        for (let m in timecardData[d]) {
+                            timecardData[d][m].forEach(sub => {
+                                payload.push({
+                                    timestamp: now,
+                                    day: t.days[d],
+                                    task: m,
+                                    subTask: sub.subDesc || "",
+                                    hours: sub.hours,
+                                    unpaid: sub.unpaid
+                                });
+                            });
+                        }
+                    }
+                    
+                    const resetBtn = document.getElementById('resetBtn');
+                    const originalText = resetBtn.textContent;
+                    resetBtn.textContent = t.sending;
+                    resetBtn.disabled = true;
+
+                    fetch(GOOGLE_WEB_APP_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        body: JSON.stringify(payload)
+                    }).then(() => {
+                        // Если нет ошибки сети - очищаем и закрываем
+                        finishReset(t, resetBtn, originalText);
+                    }).catch(err => {
+                        alert(t.sendError);
+                        resetBtn.textContent = originalText;
+                        resetBtn.disabled = false;
+                    });
+                    
+                } else {
+                    // Если URL не указан, работает как раньше
+                    finishReset(t, null, null);
+                }
             }
         }
 
