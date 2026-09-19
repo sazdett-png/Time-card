@@ -165,7 +165,6 @@
             return (today === 0 ? 6 : today - 1).toString();
         }
 
-        // Автосинхронизация стажа из Google Таблицы при старте
         function syncWithCloud() {
             if (!GOOGLE_WEB_APP_URL) return;
             fetch(GOOGLE_WEB_APP_URL)
@@ -177,7 +176,7 @@
                         updateArchiveDisplay();
                     }
                 })
-                .catch(err => console.log("Offline mode, using local data"));
+                .catch(err => console.log("Offline mode"));
         }
 
         function setLanguage(lang) {
@@ -459,19 +458,10 @@
                         }
                     })
                     .catch(err => {
-                        alert("ПОМИЛКА МЕРЕЖІ! Дані не скинуті. " + err.message);
+                        alert("ПОМИЛКА МЕРЕЖІ! " + err.message);
                         resetBtn.textContent = originalText;
                         resetBtn.disabled = false;
                     });
-                } else {
-                    let weekPaid = calculateCurrentWeeklyTotal();
-                    archiveHours += weekPaid;
-                    timecardData = {};
-                    cancelEditMode();
-                    clearInputs();
-                    saveData();
-                    updateArchiveDisplay();
-                    alert("Дані скинуто!");
                 }
             }
         }
@@ -484,7 +474,6 @@
         function clearInputs() { document.getElementById('taskInput').value = ''; document.getElementById('subTaskInput').value = ''; document.getElementById('hoursInput').value = ''; }
         function saveData() { localStorage.setItem('timecardGroupedData', JSON.stringify(timecardData)); renderTasks(); }
 
-        // Запуск и синхронизация при загрузке
         setLanguage(currentLang);
         syncWithCloud();
     </script>
