@@ -118,9 +118,9 @@
                 breakName: "Перерва", lunchBtn: "🍔 Ланч (0.5)", lunchName: "Ланч", unpaidLabel: "неоплач.", unpaidTag: "НЕОПЛАЧ.",
                 addSubBtn: "+ Додати сюди", noSubDetails: "Основна робота", totalDay: "Усього за день (оплачується):", weeklyTotal: "Разом за тиждень (оплачується):",
                 archiveLabel: "Стаж за весь час:", archiveSince: "з", archivePromptHint: "натисни, щоб встановити дату",
-                editArchivePrompt: "Введи загальну кількість годин за весь час:", editDatePrompt: "Введи дату початку (у форматі ДД.ММ.РРРР):",
+                editArchivePrompt: "Введи кількість годин для збереження в історії:", editDatePrompt: "Введи дату початку (у форматі ДД.ММ.РРРР):",
                 noTasks: "Немає записів на цей день", resetBtn: "Скинути все (для нового тижня)", alertNoDesc: "Будь ласка, напиши, що ти робив.", alertNoHours: "Вкажи коректний час.",
-                confirmReset: "Видалити всі записи за тиждень? Дані підуть у Google Таблицю.", sending: "Відправка в таблицю... ⏳", sendSuccess: "Успішно! Дані збережено в хмару.",
+                confirmReset: "Видалити всі записи за тиждень?", sending: "Відправка в таблицю... ⏳", sendSuccess: "Успішно! Дані відправлені.",
                 emptyError: "Табель порожній, немає чого відправляти.", unit: "год."
             },
             en: {
@@ -130,9 +130,9 @@
                 addBtn: "Add entry", saveBtn: "Save changes", breakBtn: "☕ Break (0.5)", breakName: "Break", lunchBtn: "🍔 Lunch (0.5)", lunchName: "Lunch",
                 unpaidLabel: "unpaid", unpaidTag: "UNPAID", addSubBtn: "+ Add here", noSubDetails: "Main work", totalDay: "Total for day (paid):",
                 weeklyTotal: "Weekly total (paid):", archiveLabel: "All-time total:", archiveSince: "since", archivePromptHint: "click to set start date",
-                editArchivePrompt: "Enter total all-time hours:", editDatePrompt: "Enter start date (e.g. DD.MM.YYYY):",
+                editArchivePrompt: "Enter total hours for history:", editDatePrompt: "Enter start date (e.g. DD.MM.YYYY):",
                 noTasks: "No entries for this day", resetBtn: "Reset all (for new week)", alertNoDesc: "Please describe what you did.", alertNoHours: "Enter valid hours.",
-                confirmReset: "Delete all entries for the week? Data will be sent to Google Sheets.", sending: "Sending to Sheets... ⏳", sendSuccess: "Success! Data saved to cloud.",
+                confirmReset: "Delete all entries for the week?", sending: "Sending to Sheets... ⏳", sendSuccess: "Success! Data sent.",
                 emptyError: "Timecard is empty.", unit: "hrs"
             },
             ru: {
@@ -143,9 +143,9 @@
                 breakName: "Перерыв", lunchBtn: "🍔 Ланч (0.5)", lunchName: "Ланч", unpaidLabel: "неоплач.", unpaidTag: "НЕОПЛАЧ.", addSubBtn: "+ Добавить сюда",
                 noSubDetails: "Основная работа", totalDay: "Итого за день (оплачивается):", weeklyTotal: "Всего за неделю (оплачивается):",
                 archiveLabel: "Стаж за всё время:", archiveSince: "с", archivePromptHint: "нажми, чтобы установить дату",
-                editArchivePrompt: "Введи общую сумму часов за всё время:", editDatePrompt: "Введи дату начала (в формате ДД.ММ.ГГГГ):",
+                editArchivePrompt: "Введи количество часов для истории:", editDatePrompt: "Введи дату начала (в формате ДД.ММ.ГГГГ):",
                 noTasks: "Нет записей на этот день", resetBtn: "Сбросить всё (для новой недели)", alertNoDesc: "Пожалуйста, напиши, что ты делал.", alertNoHours: "Укажи корректное время.",
-                confirmReset: "Удалить все записи за неделю? Данные уйдут в Google Таблицу.", sending: "Отправка в таблицу... ⏳", sendSuccess: "Успешно! Данные сохранены в облако.",
+                confirmReset: "Удалить все записи за неделю?", sending: "Отправка в таблицу... ⏳", sendSuccess: "Успешно! Данные отправлены.",
                 emptyError: "Табель пуст, нечего отправлять.", unit: "ч."
             }
         };
@@ -155,28 +155,14 @@
         let shiftStart = localStorage.getItem('timecardShiftStart') || '07:00';
         document.getElementById('shiftStartInput').value = shiftStart;
         
-        let archiveHours = 0;
-        let archiveStartDate = "";
+        let archiveHours = parseFloat(localStorage.getItem('timecardArchiveHours')) || 0;
+        let archiveStartDate = localStorage.getItem('timecardStartDate') || '';
 
         let editingDay = null, editingMainTask = null, editingSubIdx = null, editingUnpaid = false;
 
         function getCurrentDayIndex() {
             const today = new Date().getDay();
             return (today === 0 ? 6 : today - 1).toString();
-        }
-
-        function syncWithCloud() {
-            if (!GOOGLE_WEB_APP_URL) return;
-            fetch(GOOGLE_WEB_APP_URL)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.status === "Success") {
-                        archiveHours = data.totalHours;
-                        archiveStartDate = data.startDate || "";
-                        updateArchiveDisplay();
-                    }
-                })
-                .catch(err => console.log("Offline mode"));
         }
 
         function setLanguage(lang) {
@@ -253,29 +239,20 @@
         
         function editArchiveSettings() {
             const t = i18n[currentLang];
-            let newTotal = prompt(t.editArchivePrompt, archiveHours);
-            let newDate = prompt(t.editDatePrompt, archiveStartDate || '');
-            
-            if (newTotal !== null || newDate !== null) {
-                let url = `${GOOGLE_WEB_APP_URL}?action=setConfig`;
-                if (newDate !== null) url += `&date=${encodeURIComponent(newDate.trim())}`;
-                if (newTotal !== null) {
-                    let parsed = parseFloat(newTotal.replace(',', '.'));
-                    if (!isNaN(parsed) && parsed >= 0) {
-                        url += `&targetTotal=${parsed}`;
+            let newVal = prompt(t.editArchivePrompt, archiveHours);
+            if (newVal !== null) {
+                newVal = parseFloat(newVal.replace(',', '.'));
+                if (!isNaN(newVal) && newVal >= 0) {
+                    archiveHours = newVal;
+                    localStorage.setItem('timecardArchiveHours', archiveHours);
+                    
+                    let newDate = prompt(t.editDatePrompt, archiveStartDate || '');
+                    if (newDate !== null) {
+                        archiveStartDate = newDate.trim();
+                        localStorage.setItem('timecardStartDate', archiveStartDate);
                     }
+                    updateArchiveDisplay();
                 }
-                
-                fetch(url)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.status === "Success") {
-                            archiveHours = data.totalHours;
-                            archiveStartDate = data.startDate || "";
-                            updateArchiveDisplay();
-                        }
-                    })
-                    .catch(err => alert("Помилка збереження: " + err.message));
             }
         }
 
@@ -408,6 +385,13 @@
             saveData();
         }
 
+        function finishReset(t, resetBtn, originalText) {
+            let weekPaid = calculateCurrentWeeklyTotal(); archiveHours += weekPaid; localStorage.setItem('timecardArchiveHours', archiveHours);
+            timecardData = {}; cancelEditMode(); clearInputs(); saveData(); updateArchiveDisplay();
+            if(resetBtn) { resetBtn.textContent = originalText; resetBtn.disabled = false; }
+            alert(GOOGLE_WEB_APP_URL ? t.sendSuccess : "Дані скинуто!");
+        }
+
         function resetData() {
             const t = i18n[currentLang];
             if (Object.keys(timecardData).length === 0) { alert(t.emptyError); return; }
@@ -437,31 +421,23 @@
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                         body: JSON.stringify(payload)
                     })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === "Success") {
-                            archiveHours = data.totalHours;
-                            archiveStartDate = data.startDate || "";
-                            timecardData = {};
-                            cancelEditMode();
-                            clearInputs();
-                            saveData();
-                            updateArchiveDisplay();
-                            
-                            resetBtn.textContent = originalText;
-                            resetBtn.disabled = false;
-                            alert(t.sendSuccess);
+                    .then(response => response.text())
+                    .then(text => {
+                        if (text === "Success") {
+                            finishReset(t, resetBtn, originalText);
                         } else {
-                            alert("ПОМИЛКА ВІД GOOGLE: " + data.message);
+                            alert("ПОМИЛКА ВІД GOOGLE: " + text);
                             resetBtn.textContent = originalText;
                             resetBtn.disabled = false;
                         }
                     })
                     .catch(err => {
-                        alert("ПОМИЛКА МЕРЕЖІ! " + err.message);
+                        alert("ПОМИЛКА ДОСТУПУ (CORS) АБО МЕРЕЖІ! " + err.message);
                         resetBtn.textContent = originalText;
                         resetBtn.disabled = false;
                     });
+                } else {
+                    finishReset(t, null, null);
                 }
             }
         }
@@ -475,7 +451,6 @@
         function saveData() { localStorage.setItem('timecardGroupedData', JSON.stringify(timecardData)); renderTasks(); }
 
         setLanguage(currentLang);
-        syncWithCloud();
     </script>
 </body>
 </html>
