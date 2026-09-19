@@ -5,307 +5,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Тайм-кард / Timecard</title>
     <style>
-        body {
-            background-color: #121212;
-            color: #ffffff;
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            padding-top: 80px; 
-            margin: 0;
-        }
-        .header-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap; 
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        h2 {
-            color: #da291c;
-            margin: 0;
-            font-size: 1.3em;
-        }
-        .lang-switch {
-            display: flex;
-            gap: 5px;
-        }
-        .lang-btn {
-            background: #222;
-            color: #888;
-            border: 1px solid #444;
-            padding: 6px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: bold;
-            width: auto;
-            margin-top: 0;
-        }
-        .lang-btn.active {
-            background: #da291c;
-            color: #fff;
-            border-color: #da291c;
-        }
-        label {
-            display: block;
-            margin-top: 15px;
-            font-size: 14px;
-            color: #ccc;
-        }
-        input, select, button {
-            width: 100%;
-            padding: 12px;
-            margin-top: 5px;
-            box-sizing: border-box;
-            background: #222;
-            color: #fff;
-            border: 1px solid #444;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        input[type="time"] {
-            appearance: none;
-        }
-        input:focus, select:focus {
-            outline: none;
-            border-color: #da291c;
-        }
-        .tracker-block {
-            background: #2a2a2a;
-            border-left: 4px solid #d4af37;
-            padding: 12px 15px;
-            margin-top: 20px;
-            margin-bottom: 5px;
-            border-radius: 6px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .tracker-label {
-            font-size: 14px;
-            font-weight: bold;
-            color: #e0e0e0;
-        }
-        .tracker-time {
-            font-size: 1.25em;
-            font-weight: bold;
-            color: #d4af37;
-        }
-        
-        .action-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .add-btn {
-            grid-column: span 2;
-            background-color: #da291c;
-            color: white;
-            font-weight: bold;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            margin-top: 0;
-        }
+        body { background-color: #121212; color: #ffffff; font-family: Arial, sans-serif; padding: 20px; padding-top: 80px; margin: 0; }
+        .header-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; }
+        h2 { color: #da291c; margin: 0; font-size: 1.3em; }
+        .lang-switch { display: flex; gap: 5px; }
+        .lang-btn { background: #222; color: #888; border: 1px solid #444; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; width: auto; margin-top: 0; }
+        .lang-btn.active { background: #da291c; color: #fff; border-color: #da291c; }
+        label { display: block; margin-top: 15px; font-size: 14px; color: #ccc; }
+        input, select, button { width: 100%; padding: 12px; margin-top: 5px; box-sizing: border-box; background: #222; color: #fff; border: 1px solid #444; border-radius: 5px; font-size: 16px; }
+        input[type="time"] { appearance: none; }
+        input:focus, select:focus { outline: none; border-color: #da291c; }
+        .tracker-block { background: #2a2a2a; border-left: 4px solid #d4af37; padding: 12px 15px; margin-top: 20px; margin-bottom: 5px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .tracker-label { font-size: 14px; font-weight: bold; color: #e0e0e0; }
+        .tracker-time { font-size: 1.25em; font-weight: bold; color: #d4af37; }
+        .action-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        .add-btn { grid-column: span 2; background-color: #da291c; color: white; font-weight: bold; border: none; cursor: pointer; transition: background-color 0.2s; margin-top: 0; }
         .add-btn:active { background-color: #b52217; }
         .add-btn:disabled { background-color: #555; color: #888; cursor: not-allowed; }
         .add-btn.edit-mode { background-color: #d4af37; color: #000; }
-        
-        .quick-btn {
-            background-color: #333;
-            color: #ddd;
-            border: 1px solid #555;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            white-space: nowrap;
-            margin-top: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 12px 5px;
-        }
+        .quick-btn { background-color: #333; color: #ddd; border: 1px solid #555; font-weight: bold; cursor: pointer; transition: background-color 0.2s; white-space: nowrap; margin-top: 0; display: flex; justify-content: center; align-items: center; padding: 12px 5px; }
         .quick-btn:active { background-color: #555; }
-
-        .task-list {
-            margin-top: 25px;
-        }
-        .day-group {
-            background: #1e1e1e;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            border-left: 4px solid #da291c;
-        }
-        .day-title {
-            color: #da291c;
-            margin: 0 0 10px 0;
-            font-size: 1.1em;
-            border-bottom: 1px solid #333;
-            padding-bottom: 8px;
-        }
-        .main-task-group {
-            background: #2a2a2a;
-            border-radius: 6px;
-            margin-bottom: 12px;
-            padding: 10px;
-            border: 1px solid transparent;
-        }
-        
-        .main-task-group.unpaid-group {
-            background: #181818;
-            border: 1px dashed #555;
-            border-left: 4px solid #555;
-            opacity: 0.8;
-        }
-        .unpaid-tag {
-            font-size: 0.7em;
-            color: #aaa;
-            border: 1px solid #555;
-            padding: 2px 5px;
-            border-radius: 4px;
-            margin-left: 8px;
-            vertical-align: middle;
-            text-transform: uppercase;
-        }
-
-        .main-task-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #444;
-            padding-bottom: 8px;
-            margin-bottom: 8px;
-        }
-        .main-task-name {
-            font-size: 1.05em;
-            font-weight: bold;
-            color: #e0e0e0;
-            word-break: break-word;
-        }
-        .main-task-total {
-            color: #da291c;
-            font-weight: bold;
-            white-space: nowrap;
-            margin-left: 10px;
-        }
-        .unpaid-group .main-task-total {
-            color: #777;
-        }
-        .sub-task-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px dashed #444;
-        }
-        .sub-task-item:last-of-type {
-            border-bottom: none;
-        }
-        .sub-task-name {
-            flex-grow: 1;
-            color: #bbb;
-            font-size: 0.95em;
-            padding-right: 10px;
-            word-break: break-word;
-        }
-        .task-controls {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            white-space: nowrap;
-        }
-        .task-hours {
-            font-weight: bold;
-            color: #fff;
-            margin-right: 5px;
-        }
-        .icon-btn {
-            background-color: #333;
-            border: none;
-            border-radius: 4px;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            margin: 0;
-            padding: 0;
-            font-size: 16px;
-        }
+        .task-list { margin-top: 25px; }
+        .day-group { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #da291c; }
+        .day-title { color: #da291c; margin: 0 0 10px 0; font-size: 1.1em; border-bottom: 1px solid #333; padding-bottom: 8px; }
+        .main-task-group { background: #2a2a2a; border-radius: 6px; margin-bottom: 12px; padding: 10px; border: 1px solid transparent; }
+        .main-task-group.unpaid-group { background: #181818; border: 1px dashed #555; border-left: 4px solid #555; opacity: 0.8; }
+        .unpaid-tag { font-size: 0.7em; color: #aaa; border: 1px solid #555; padding: 2px 5px; border-radius: 4px; margin-left: 8px; vertical-align: middle; text-transform: uppercase; }
+        .main-task-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; padding-bottom: 8px; margin-bottom: 8px; }
+        .main-task-name { font-size: 1.05em; font-weight: bold; color: #e0e0e0; word-break: break-word; }
+        .main-task-total { color: #da291c; font-weight: bold; white-space: nowrap; margin-left: 10px; }
+        .unpaid-group .main-task-total { color: #777; }
+        .sub-task-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #444; }
+        .sub-task-item:last-of-type { border-bottom: none; }
+        .sub-task-name { flex-grow: 1; color: #bbb; font-size: 0.95em; padding-right: 10px; word-break: break-word; }
+        .task-controls { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+        .task-hours { font-weight: bold; color: #fff; margin-right: 5px; }
+        .icon-btn { background-color: #333; border: none; border-radius: 4px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; margin: 0; padding: 0; font-size: 16px; }
         .edit-btn { color: #d4af37; }
         .delete-btn { color: #da291c; }
         .icon-btn:active { background-color: #555; }
-        .add-sub-btn {
-            background: transparent;
-            border: 1px dashed #555;
-            color: #aaa;
-            width: 100%;
-            padding: 8px;
-            margin-top: 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            text-align: center;
-            font-size: 14px;
-            transition: all 0.2s;
-        }
-        .add-sub-btn:active {
-            border-color: #da291c;
-            color: #da291c;
-            background: #333;
-        }
-        .total-hours {
-            font-weight: bold;
-            margin-top: 15px;
-            color: #aaa;
-            text-align: right;
-            border-top: 1px solid #444;
-            padding-top: 10px;
-        }
-        .weekly-total {
-            text-align: center;
-            font-size: 1.1em;
-            color: #fff;
-            margin-top: 20px;
-            padding: 12px;
-            background: #1e1e1e;
-            border-radius: 8px;
-            border: 1px solid #da291c;
-            font-weight: bold;
-        }
-        .archive-total {
-            text-align: center;
-            font-size: 0.95em;
-            color: #aaa;
-            margin-top: 10px;
-            padding: 10px;
-            background: #1a1a1a;
-            border-radius: 8px;
-            border: 1px solid #333;
-        }
-        .archive-number {
-            font-weight: bold;
-            color: #4CAF50;
-            cursor: pointer;
-            text-decoration: underline;
-            text-decoration-style: dashed;
-        }
-        .empty-day {
-            text-align: center; 
-            color: #777; 
-            margin-top: 30px; 
-            margin-bottom: 20px;
-        }
-        .reset-btn {
-            background-color: #444;
-            color: #ccc;
-            margin-top: 30px;
-            border: none;
-            cursor: pointer;
-        }
+        .add-sub-btn { background: transparent; border: 1px dashed #555; color: #aaa; width: 100%; padding: 8px; margin-top: 10px; border-radius: 4px; cursor: pointer; text-align: center; font-size: 14px; transition: all 0.2s; }
+        .add-sub-btn:active { border-color: #da291c; color: #da291c; background: #333; }
+        .total-hours { font-weight: bold; margin-top: 15px; color: #aaa; text-align: right; border-top: 1px solid #444; padding-top: 10px; }
+        .weekly-total { text-align: center; font-size: 1.1em; color: #fff; margin-top: 20px; padding: 12px; background: #1e1e1e; border-radius: 8px; border: 1px solid #da291c; font-weight: bold; }
+        .archive-total { text-align: center; font-size: 0.95em; color: #aaa; margin-top: 10px; padding: 10px; background: #1a1a1a; border-radius: 8px; border: 1px solid #333; }
+        .archive-number { font-weight: bold; color: #4CAF50; cursor: pointer; text-decoration: underline; text-decoration-style: dashed; }
+        .empty-day { text-align: center; color: #777; margin-top: 30px; margin-bottom: 20px; }
+        .reset-btn { background-color: #444; color: #ccc; margin-top: 30px; border: none; cursor: pointer; }
         .reset-btn:active { background-color: #333; }
         .reset-btn:disabled { background-color: #222; color: #555; cursor: not-allowed; }
     </style>
@@ -359,133 +105,55 @@
     <button class="reset-btn" id="resetBtn" onclick="resetData()">Скинути все (для нового тижня)</button>
 
     <script>
-        // === ВАЖНО: ВСТАВЬ ССЫЛКУ НА СВОЙ GOOGLE SCRIPT МЕЖДУ КАВЫЧКАМИ ===
+        // === ВСТАВЬ ССЫЛКУ СЮДА ===
         const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwC50uZdO3ghPrUJx1UcfgoNaaB3HY7mg4hro9jNM9J7TI0olk41xdU-F2mXxavFk0M/exec"; 
-        // =================================================================
+        // ==========================
 
         const i18n = {
             uk: {
-                title: "Робочий табель",
-                dayLabel: "День тижня:",
-                days: ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"],
-                shiftStartLabel: "Початок зміни:",
-                trackerLabel: "Поточний час за табелем:",
-                taskLabel: "Що робив? (Головна робота)",
-                taskPlaceholder: "Наприклад: Боксінг, Прокладка кабелю",
-                subTaskLabel: "Деталі / Підгрупа (необов'язково):",
-                subTaskPlaceholder: "Наприклад: 1 поверх, кімната 2",
-                hoursLabel: "Час (0.25 = 15 хв, 0.5 = 30 хв, 1 = 1 год):",
-                addBtn: "Додати запис",
-                saveBtn: "Зберегти зміни",
-                breakBtn: "☕ Перерва (0.5)",
-                breakName: "Перерва",
-                lunchBtn: "🍔 Ланч (0.5)",
-                lunchName: "Ланч",
-                unpaidLabel: "неоплач.",
-                unpaidTag: "НЕОПЛАЧ.",
-                addSubBtn: "+ Додати сюди",
-                noSubDetails: "Основна робота",
-                totalDay: "Усього за день (оплачується):",
-                weeklyTotal: "Разом за тиждень (оплачується):",
-                archiveLabel: "Стаж за весь час (історія):",
-                editArchivePrompt: "Введи кількість годин для збереження в історії:",
-                noTasks: "Немає записів на цей день",
-                resetBtn: "Скинути все (для нового тижня)",
-                alertNoDesc: "Будь ласка, напиши, що ти робив.",
-                alertNoHours: "Вкажи коректний час (наприклад, 0.25, 0.5, 1).",
-                confirmReset: "Видалити всі записи за тиждень? Оплачувані години будуть додані до стажу за весь час.",
-                sending: "Відправка в таблицю... ⏳",
-                sendSuccess: "Успішно! Тиждень закрито, дані відправлені в Google Sheets.",
-                sendError: "Помилка при відправці! Перевір інтернет. Твої дані НЕ були видалені, спробуй пізніше.",
-                emptyError: "Табель порожній, немає чого відправляти.",
-                unit: "год."
+                title: "Робочий табель", dayLabel: "День тижня:", days: ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"],
+                shiftStartLabel: "Початок зміни:", trackerLabel: "Поточний час за табелем:", taskLabel: "Що робив? (Головна робота)",
+                taskPlaceholder: "Наприклад: Боксінг, Прокладка кабелю", subTaskLabel: "Деталі / Підгрупа (необов'язково):", subTaskPlaceholder: "Наприклад: 1 поверх, кімната 2",
+                hoursLabel: "Час (0.25 = 15 хв, 0.5 = 30 хв, 1 = 1 год):", addBtn: "Додати запис", saveBtn: "Зберегти зміни", breakBtn: "☕ Перерва (0.5)",
+                breakName: "Перерва", lunchBtn: "🍔 Ланч (0.5)", lunchName: "Ланч", unpaidLabel: "неоплач.", unpaidTag: "НЕОПЛАЧ.",
+                addSubBtn: "+ Додати сюди", noSubDetails: "Основна робота", totalDay: "Усього за день (оплачується):", weeklyTotal: "Разом за тиждень (оплачується):",
+                archiveLabel: "Стаж за весь час (історія):", editArchivePrompt: "Введи кількість годин для збереження в історії:", noTasks: "Немає записів на цей день",
+                resetBtn: "Скинути все (для нового тижня)", alertNoDesc: "Будь ласка, напиши, що ти робив.", alertNoHours: "Вкажи коректний час (наприклад, 0.25, 0.5, 1).",
+                confirmReset: "Видалити всі записи за тиждень?", sending: "Відправка в таблицю... ⏳", sendSuccess: "Успішно! Дані відправлені.",
+                emptyError: "Табель порожній, немає чого відправляти.", unit: "год."
             },
             en: {
-                title: "Work Timecard",
-                dayLabel: "Day of the week:",
-                days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-                shiftStartLabel: "Shift start:",
-                trackerLabel: "Current tracked time:",
-                taskLabel: "Main Task:",
-                taskPlaceholder: "E.g.: Boxing, Pulling wire",
-                subTaskLabel: "Details / Sub-group (optional):",
-                subTaskPlaceholder: "E.g.: 1st floor, room 2",
-                hoursLabel: "Time (0.25 = 15m, 0.5 = 30m, 1 = 1h):",
-                addBtn: "Add entry",
-                saveBtn: "Save changes",
-                breakBtn: "☕ Break (0.5)",
-                breakName: "Break",
-                lunchBtn: "🍔 Lunch (0.5)",
-                lunchName: "Lunch",
-                unpaidLabel: "unpaid",
-                unpaidTag: "UNPAID",
-                addSubBtn: "+ Add here",
-                noSubDetails: "Main work",
-                totalDay: "Total for day (paid):",
-                weeklyTotal: "Weekly total (paid):",
-                archiveLabel: "All-time total (history):",
-                editArchivePrompt: "Enter the number of hours to save in history:",
-                noTasks: "No entries for this day",
-                resetBtn: "Reset all (for new week)",
-                alertNoDesc: "Please describe what you did.",
-                alertNoHours: "Enter valid hours (e.g., 0.25, 0.5, 1).",
-                confirmReset: "Delete all entries for the week? Paid hours will be added to your all-time history.",
-                sending: "Sending to Sheets... ⏳",
-                sendSuccess: "Success! Week closed, data sent to Google Sheets.",
-                sendError: "Network error! Check your connection. Your data was NOT deleted, try again later.",
-                emptyError: "Timecard is empty, nothing to send.",
-                unit: "hrs"
+                title: "Work Timecard", dayLabel: "Day of the week:", days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+                shiftStartLabel: "Shift start:", trackerLabel: "Current tracked time:", taskLabel: "Main Task:", taskPlaceholder: "E.g.: Boxing, Pulling wire",
+                subTaskLabel: "Details / Sub-group (optional):", subTaskPlaceholder: "E.g.: 1st floor, room 2", hoursLabel: "Time (0.25 = 15m, 0.5 = 30m, 1 = 1h):",
+                addBtn: "Add entry", saveBtn: "Save changes", breakBtn: "☕ Break (0.5)", breakName: "Break", lunchBtn: "🍔 Lunch (0.5)", lunchName: "Lunch",
+                unpaidLabel: "unpaid", unpaidTag: "UNPAID", addSubBtn: "+ Add here", noSubDetails: "Main work", totalDay: "Total for day (paid):",
+                weeklyTotal: "Weekly total (paid):", archiveLabel: "All-time total (history):", editArchivePrompt: "Enter the number of hours to save in history:",
+                noTasks: "No entries for this day", resetBtn: "Reset all (for new week)", alertNoDesc: "Please describe what you did.", alertNoHours: "Enter valid hours.",
+                confirmReset: "Delete all entries for the week?", sending: "Sending to Sheets... ⏳", sendSuccess: "Success! Data sent.",
+                emptyError: "Timecard is empty.", unit: "hrs"
             },
             ru: {
-                title: "Рабочий табель",
-                dayLabel: "День недели:",
-                days: ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"],
-                shiftStartLabel: "Начало смены:",
-                trackerLabel: "Текущее время по табелю:",
-                taskLabel: "Что делал? (Главная работа)",
-                taskPlaceholder: "Например: Боксинг, Протяжка",
-                subTaskLabel: "Детали / Подгруппа (необязательно):",
-                subTaskPlaceholder: "Например: 1 этаж, комната",
-                hoursLabel: "Время (0.25 = 15 мин, 0.5 = 30 мин, 1 = 1 час):",
-                addBtn: "Добавить запись",
-                saveBtn: "Сохранить изменения",
-                breakBtn: "☕ Перерыв (0.5)",
-                breakName: "Перерыв",
-                lunchBtn: "🍔 Ланч (0.5)",
-                lunchName: "Ланч",
-                unpaidLabel: "неоплач.",
-                unpaidTag: "НЕОПЛАЧ.",
-                addSubBtn: "+ Добавить сюда",
-                noSubDetails: "Основная работа",
-                totalDay: "Итого за день (оплачивается):",
-                weeklyTotal: "Всего за неделю (оплачивается):",
-                archiveLabel: "Стаж за всё время (история):",
-                editArchivePrompt: "Введи количество часов для сохранения в истории:",
-                noTasks: "Нет записей на этот день",
-                resetBtn: "Сбросить всё (для новой недели)",
-                alertNoDesc: "Пожалуйста, напиши, что ты делал.",
-                alertNoHours: "Укажи корректное время.",
-                confirmReset: "Удалить все записи за неделю? Оплачиваемые часы будут добавлены в общий стаж.",
-                sending: "Отправка в таблицу... ⏳",
-                sendSuccess: "Успешно! Неделя закрыта, данные отправлены в Google Sheets.",
-                sendError: "Ошибка отправки! Проверь интернет. Твои данные НЕ были удалены, попробуй позже.",
-                emptyError: "Табель пуст, нечего отправлять.",
-                unit: "ч."
+                title: "Рабочий табель", dayLabel: "День недели:", days: ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"],
+                shiftStartLabel: "Начало смены:", trackerLabel: "Текущее время по табелю:", taskLabel: "Что делал? (Главная работа)",
+                taskPlaceholder: "Например: Боксинг, Протяжка", subTaskLabel: "Детали / Подгруппа (необязательно):", subTaskPlaceholder: "Например: 1 этаж, комната",
+                hoursLabel: "Время (0.25 = 15 мин, 0.5 = 30 мин, 1 = 1 час):", addBtn: "Добавить запись", saveBtn: "Сохранить изменения", breakBtn: "☕ Перерыв (0.5)",
+                breakName: "Перерыв", lunchBtn: "🍔 Ланч (0.5)", lunchName: "Ланч", unpaidLabel: "неоплач.", unpaidTag: "НЕОПЛАЧ.", addSubBtn: "+ Добавить сюда",
+                noSubDetails: "Основная работа", totalDay: "Итого за день (оплачивается):", weeklyTotal: "Всего за неделю (оплачивается):",
+                archiveLabel: "Стаж за всё время (история):", editArchivePrompt: "Введи количество часов для сохранения в истории:", noTasks: "Нет записей на этот день",
+                resetBtn: "Сбросить всё (для новой недели)", alertNoDesc: "Пожалуйста, напиши, что ты делал.", alertNoHours: "Укажи корректное время.",
+                confirmReset: "Удалить все записи за неделю?", sending: "Отправка в таблицу... ⏳", sendSuccess: "Успешно! Данные отправлены.",
+                emptyError: "Табель пуст, нечего отправлять.", unit: "ч."
             }
         };
 
         let currentLang = localStorage.getItem('timecardLang') || 'uk';
         let timecardData = JSON.parse(localStorage.getItem('timecardGroupedData')) || {};
-        
         let shiftStart = localStorage.getItem('timecardShiftStart') || '07:00';
         document.getElementById('shiftStartInput').value = shiftStart;
-
         let archiveHours = parseFloat(localStorage.getItem('timecardArchiveHours')) || 0;
 
-        let editingDay = null;
-        let editingMainTask = null;
-        let editingSubIdx = null;
-        let editingUnpaid = false;
+        let editingDay = null, editingMainTask = null, editingSubIdx = null, editingUnpaid = false;
 
         function getCurrentDayIndex() {
             const today = new Date().getDay();
@@ -493,12 +161,9 @@
         }
 
         function setLanguage(lang) {
-            currentLang = lang;
-            localStorage.setItem('timecardLang', lang);
-
+            currentLang = lang; localStorage.setItem('timecardLang', lang);
             document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`btn-${lang}`).classList.add('active');
-
             const t = i18n[lang];
             document.getElementById('appTitle').textContent = t.title;
             document.getElementById('labelDay').textContent = t.dayLabel;
@@ -509,14 +174,11 @@
             document.getElementById('labelSubTask').textContent = t.subTaskLabel;
             document.getElementById('subTaskInput').placeholder = t.subTaskPlaceholder;
             document.getElementById('labelHours').textContent = t.hoursLabel;
-            
             const addBtn = document.getElementById('addBtn');
             addBtn.textContent = (editingDay !== null) ? t.saveBtn : t.addBtn;
-            
             document.getElementById('breakBtn').textContent = t.breakBtn;
             document.getElementById('lunchBtn').textContent = t.lunchBtn;
             document.getElementById('resetBtn').textContent = t.resetBtn;
-            
             document.getElementById('labelArchive').textContent = t.archiveLabel;
             document.getElementById('labelArchiveUnit').textContent = t.unit;
 
@@ -524,42 +186,26 @@
             const selectedIdx = select.value !== "" ? select.value : getCurrentDayIndex();
             select.innerHTML = '';
             t.days.forEach((dayName, idx) => {
-                const opt = document.createElement('option');
-                opt.value = idx;
-                opt.textContent = dayName;
-                select.appendChild(opt);
+                const opt = document.createElement('option'); opt.value = idx; opt.textContent = dayName; select.appendChild(opt);
             });
             select.value = selectedIdx;
-
-            renderTasks();
-            updateArchiveDisplay();
+            renderTasks(); updateArchiveDisplay();
         }
 
         function saveShiftStart() {
             let val = document.getElementById('shiftStartInput').value;
-            if (!val) {
-                val = '07:00';
-                document.getElementById('shiftStartInput').value = val;
-            }
-            shiftStart = val;
-            localStorage.setItem('timecardShiftStart', shiftStart);
-            renderTasks();
+            if (!val) { val = '07:00'; document.getElementById('shiftStartInput').value = val; }
+            shiftStart = val; localStorage.setItem('timecardShiftStart', shiftStart); renderTasks();
         }
 
         function updateDatalist() {
-            const datalist = document.getElementById('taskSuggestions');
-            datalist.innerHTML = '';
+            const datalist = document.getElementById('taskSuggestions'); datalist.innerHTML = '';
             const uniqueTasks = new Set();
-            
             for (let dayIdx in timecardData) {
-                for (let mainTask in timecardData[dayIdx]) {
-                    uniqueTasks.add(mainTask);
-                }
+                for (let mainTask in timecardData[dayIdx]) { uniqueTasks.add(mainTask); }
             }
             uniqueTasks.forEach(taskName => {
-                const opt = document.createElement('option');
-                opt.value = taskName;
-                datalist.appendChild(opt);
+                const opt = document.createElement('option'); opt.value = taskName; datalist.appendChild(opt);
             });
         }
 
@@ -567,84 +213,41 @@
             const [startH, startM] = shiftStart.split(':').map(Number);
             const addH = Math.floor(dayTotalTrackerHours);
             const addM = Math.round((dayTotalTrackerHours - addH) * 60);
-            
-            let finalH = startH + addH;
-            let finalM = startM + addM;
-            
-            if (finalM >= 60) {
-                finalH += Math.floor(finalM / 60);
-                finalM = finalM % 60;
-            }
-            if (finalH >= 24) {
-                finalH = finalH % 24;
-            }
-            
-            const formattedH = finalH.toString().padStart(2, '0');
-            const formattedM = finalM.toString().padStart(2, '0');
-            
-            document.getElementById('trackerTime').textContent = `${formattedH}:${formattedM}`;
+            let finalH = startH + addH; let finalM = startM + addM;
+            if (finalM >= 60) { finalH += Math.floor(finalM / 60); finalM = finalM % 60; }
+            if (finalH >= 24) { finalH = finalH % 24; }
+            document.getElementById('trackerTime').textContent = `${finalH.toString().padStart(2, '0')}:${finalM.toString().padStart(2, '0')}`;
         }
         
-        function updateArchiveDisplay() {
-            document.getElementById('archiveTime').textContent = archiveHours.toString();
-        }
+        function updateArchiveDisplay() { document.getElementById('archiveTime').textContent = archiveHours.toString(); }
         
         function editArchive() {
-            const t = i18n[currentLang];
-            let newVal = prompt(t.editArchivePrompt, archiveHours);
+            const t = i18n[currentLang]; let newVal = prompt(t.editArchivePrompt, archiveHours);
             if (newVal !== null) {
                 newVal = parseFloat(newVal.replace(',', '.'));
                 if (!isNaN(newVal) && newVal >= 0) {
-                    archiveHours = newVal;
-                    localStorage.setItem('timecardArchiveHours', archiveHours);
-                    updateArchiveDisplay();
+                    archiveHours = newVal; localStorage.setItem('timecardArchiveHours', archiveHours); updateArchiveDisplay();
                 }
             }
         }
 
         function renderTasks() {
-            const taskList = document.getElementById('taskList');
-            taskList.innerHTML = '';
-            
-            const select = document.getElementById('daySelect');
-            const dayIdx = select.value;
+            const taskList = document.getElementById('taskList'); taskList.innerHTML = '';
+            const select = document.getElementById('daySelect'); const dayIdx = select.value;
             if (!dayIdx) return;
-
-            const t = i18n[currentLang];
-            const dayStr = dayIdx.toString();
-            const dayTasks = timecardData[dayStr];
-            
-            let dayPaidHours = 0;
-            let dayTrackerHours = 0;
+            const t = i18n[currentLang]; const dayStr = dayIdx.toString(); const dayTasks = timecardData[dayStr];
+            let dayPaidHours = 0; let dayTrackerHours = 0;
 
             if (dayTasks && Object.keys(dayTasks).length > 0) {
-                const dayGroup = document.createElement('div');
-                dayGroup.className = 'day-group';
+                const dayGroup = document.createElement('div'); dayGroup.className = 'day-group';
                 let html = `<h3 class="day-title">${t.days[dayIdx]}</h3>`;
-
                 for (let mainTask in dayTasks) {
-                    let mainTaskPaid = 0;
-                    let subTasksHtml = '';
-                    let isAllUnpaid = true;
-
+                    let mainTaskPaid = 0; let subTasksHtml = ''; let isAllUnpaid = true;
                     dayTasks[mainTask].forEach((sub, index) => {
-                        const h = parseFloat(sub.hours);
-                        dayTrackerHours += h;
-                        
-                        if (!sub.unpaid) {
-                            isAllUnpaid = false;
-                            mainTaskPaid += h;
-                        }
-                        
-                        let hourDisplay;
-                        if (sub.unpaid) {
-                            hourDisplay = `<span style="color:#777;">${sub.hours} ${t.unit} <small>(${t.unpaidLabel})</small></span>`;
-                        } else {
-                            hourDisplay = `${sub.hours} ${t.unit}`;
-                        }
-
+                        const h = parseFloat(sub.hours); dayTrackerHours += h;
+                        if (!sub.unpaid) { isAllUnpaid = false; mainTaskPaid += h; }
+                        let hourDisplay = sub.unpaid ? `<span style="color:#777;">${sub.hours} ${t.unit} <small>(${t.unpaidLabel})</small></span>` : `${sub.hours} ${t.unit}`;
                         const displayName = sub.subDesc ? sub.subDesc : `<i>${t.noSubDetails}</i>`;
-                        
                         subTasksHtml += `
                             <div class="sub-task-item">
                                 <div class="sub-task-name">${displayName}</div>
@@ -656,48 +259,34 @@
                             </div>
                         `;
                     });
-
                     dayPaidHours += mainTaskPaid;
-                    
                     const groupClass = isAllUnpaid ? "main-task-group unpaid-group" : "main-task-group";
                     const unpaidTagHtml = isAllUnpaid ? `<span class="unpaid-tag">${t.unpaidTag}</span>` : '';
                     const displayTotal = isAllUnpaid ? '' : `${mainTaskPaid} ${t.unit}`;
-
                     html += `
                         <div class="${groupClass}">
                             <div class="main-task-header">
                                 <span class="main-task-name">${mainTask} ${unpaidTagHtml}</span>
                                 <span class="main-task-total">${displayTotal}</span>
                             </div>
-                            <div class="sub-task-list">
-                                ${subTasksHtml}
-                            </div>
+                            <div class="sub-task-list">${subTasksHtml}</div>
                             <button class="add-sub-btn" onclick="prefillSubTask('${dayStr}', '${mainTask.replace(/'/g, "\\'")}')">${t.addSubBtn}</button>
                         </div>
                     `;
                 }
-
                 html += `<div class="total-hours">${t.totalDay} ${dayPaidHours} ${t.unit}</div>`;
-                dayGroup.innerHTML = html;
-                taskList.appendChild(dayGroup);
+                dayGroup.innerHTML = html; taskList.appendChild(dayGroup);
             } else {
                 taskList.innerHTML = `<div class="empty-day">${t.noTasks}</div>`;
             }
-
-            updateTrackerTime(dayTrackerHours);
-            updateDatalist();
-            updateWeeklyTotal();
+            updateTrackerTime(dayTrackerHours); updateDatalist(); updateWeeklyTotal();
         }
 
         function calculateCurrentWeeklyTotal() {
             let weeklyHours = 0;
             for (let d in timecardData) {
                 for (let m in timecardData[d]) {
-                    timecardData[d][m].forEach(sub => {
-                        if (!sub.unpaid) {
-                            weeklyHours += parseFloat(sub.hours);
-                        }
-                    });
+                    timecardData[d][m].forEach(sub => { if (!sub.unpaid) weeklyHours += parseFloat(sub.hours); });
                 }
             }
             return weeklyHours;
@@ -705,15 +294,9 @@
 
         function updateWeeklyTotal() {
             let weeklyHours = calculateCurrentWeeklyTotal();
-            const t = i18n[currentLang];
-            const wtDiv = document.getElementById('weeklyTotal');
-            
-            if (weeklyHours > 0) {
-                wtDiv.style.display = 'block';
-                wtDiv.textContent = `${t.weeklyTotal} ${weeklyHours} ${t.unit}`;
-            } else {
-                wtDiv.style.display = 'none';
-            }
+            const t = i18n[currentLang]; const wtDiv = document.getElementById('weeklyTotal');
+            if (weeklyHours > 0) { wtDiv.style.display = 'block'; wtDiv.textContent = `${t.weeklyTotal} ${weeklyHours} ${t.unit}`; } 
+            else { wtDiv.style.display = 'none'; }
         }
 
         function addOrUpdateTask() {
@@ -723,135 +306,74 @@
             const hours = parseFloat(document.getElementById('hoursInput').value);
             const t = i18n[currentLang];
 
-            if (!desc) {
-                alert(t.alertNoDesc);
-                return;
-            }
-            if (isNaN(hours) || hours <= 0) {
-                alert(t.alertNoHours);
-                return;
-            }
+            if (!desc) { alert(t.alertNoDesc); return; }
+            if (isNaN(hours) || hours <= 0) { alert(t.alertNoHours); return; }
 
             let isUnpaid = false;
-
             if (editingDay !== null) {
                 isUnpaid = editingUnpaid;
                 timecardData[editingDay][editingMainTask].splice(editingSubIdx, 1);
-                if (timecardData[editingDay][editingMainTask].length === 0) {
-                    delete timecardData[editingDay][editingMainTask];
-                }
+                if (timecardData[editingDay][editingMainTask].length === 0) delete timecardData[editingDay][editingMainTask];
                 cancelEditMode();
             }
-
             if (!timecardData[dayIdx]) timecardData[dayIdx] = {};
             if (!timecardData[dayIdx][desc]) timecardData[dayIdx][desc] = [];
-            
             timecardData[dayIdx][desc].push({ subDesc: subDesc, hours: hours, unpaid: isUnpaid });
-
-            saveData();
-            clearInputs();
+            saveData(); clearInputs();
         }
 
         function addQuickBreak() {
-            const dayIdx = document.getElementById('daySelect').value;
-            const t = i18n[currentLang];
-            const breakTaskName = t.breakName;
-            
+            const dayIdx = document.getElementById('daySelect').value; const t = i18n[currentLang]; const task = t.breakName;
             if (!timecardData[dayIdx]) timecardData[dayIdx] = {};
-            if (!timecardData[dayIdx][breakTaskName]) timecardData[dayIdx][breakTaskName] = [];
-            
-            timecardData[dayIdx][breakTaskName].push({ subDesc: "", hours: 0.5, unpaid: false });
+            if (!timecardData[dayIdx][task]) timecardData[dayIdx][task] = [];
+            timecardData[dayIdx][task].push({ subDesc: "", hours: 0.5, unpaid: false });
             saveData();
         }
 
         function addQuickLunch() {
-            const dayIdx = document.getElementById('daySelect').value;
-            const t = i18n[currentLang];
-            const lunchTaskName = t.lunchName;
-            
+            const dayIdx = document.getElementById('daySelect').value; const t = i18n[currentLang]; const task = t.lunchName;
             if (!timecardData[dayIdx]) timecardData[dayIdx] = {};
-            if (!timecardData[dayIdx][lunchTaskName]) timecardData[dayIdx][lunchTaskName] = [];
-            
-            timecardData[dayIdx][lunchTaskName].push({ subDesc: "", hours: 0.5, unpaid: true });
+            if (!timecardData[dayIdx][task]) timecardData[dayIdx][task] = [];
+            timecardData[dayIdx][task].push({ subDesc: "", hours: 0.5, unpaid: true });
             saveData();
         }
 
         function prefillSubTask(dayIdx, mainTask) {
-            cancelEditMode();
-            
-            document.getElementById('daySelect').value = dayIdx;
-            document.getElementById('taskInput').value = mainTask;
-            document.getElementById('subTaskInput').value = '';
-            document.getElementById('hoursInput').value = '';
-            
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            document.getElementById('subTaskInput').focus();
+            cancelEditMode(); document.getElementById('daySelect').value = dayIdx;
+            document.getElementById('taskInput').value = mainTask; document.getElementById('subTaskInput').value = '';
+            document.getElementById('hoursInput').value = ''; window.scrollTo({ top: 0, behavior: 'smooth' }); document.getElementById('subTaskInput').focus();
         }
 
         function editTask(dayIdx, mainTask, index) {
-            const sub = timecardData[dayIdx][mainTask][index];
-            const t = i18n[currentLang];
-            
-            document.getElementById('daySelect').value = dayIdx;
-            document.getElementById('taskInput').value = mainTask;
-            document.getElementById('subTaskInput').value = sub.subDesc || '';
-            document.getElementById('hoursInput').value = sub.hours;
-            
-            editingDay = dayIdx;
-            editingMainTask = mainTask;
-            editingSubIdx = index;
-            editingUnpaid = sub.unpaid || false;
-            
-            const addBtn = document.getElementById('addBtn');
-            addBtn.textContent = t.saveBtn;
-            addBtn.classList.add('edit-mode');
-            
+            const sub = timecardData[dayIdx][mainTask][index]; const t = i18n[currentLang];
+            document.getElementById('daySelect').value = dayIdx; document.getElementById('taskInput').value = mainTask;
+            document.getElementById('subTaskInput').value = sub.subDesc || ''; document.getElementById('hoursInput').value = sub.hours;
+            editingDay = dayIdx; editingMainTask = mainTask; editingSubIdx = index; editingUnpaid = sub.unpaid || false;
+            const addBtn = document.getElementById('addBtn'); addBtn.textContent = t.saveBtn; addBtn.classList.add('edit-mode');
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function deleteTask(dayIdx, mainTask, index) {
-            if (editingDay === dayIdx && editingMainTask === mainTask && editingSubIdx === index) {
-                cancelEditMode();
-                clearInputs();
-            }
-
+            if (editingDay === dayIdx && editingMainTask === mainTask && editingSubIdx === index) { cancelEditMode(); clearInputs(); }
             timecardData[dayIdx][mainTask].splice(index, 1);
-            if (timecardData[dayIdx][mainTask].length === 0) {
-                delete timecardData[dayIdx][mainTask];
-            }
+            if (timecardData[dayIdx][mainTask].length === 0) delete timecardData[dayIdx][mainTask];
             saveData();
         }
 
         function finishReset(t, resetBtn, originalText) {
-            let weekPaid = calculateCurrentWeeklyTotal();
-            archiveHours += weekPaid;
-            localStorage.setItem('timecardArchiveHours', archiveHours);
-            
-            timecardData = {};
-            cancelEditMode();
-            clearInputs();
-            saveData();
-            updateArchiveDisplay();
-            
-            if(resetBtn) {
-                resetBtn.textContent = originalText;
-                resetBtn.disabled = false;
-            }
-            
+            let weekPaid = calculateCurrentWeeklyTotal(); archiveHours += weekPaid; localStorage.setItem('timecardArchiveHours', archiveHours);
+            timecardData = {}; cancelEditMode(); clearInputs(); saveData(); updateArchiveDisplay();
+            if(resetBtn) { resetBtn.textContent = originalText; resetBtn.disabled = false; }
             alert(GOOGLE_WEB_APP_URL ? t.sendSuccess : "Дані скинуто!");
         }
 
         function resetData() {
             const t = i18n[currentLang];
-            
-            if (Object.keys(timecardData).length === 0) {
-                alert(t.emptyError);
-                return;
-            }
+            if (Object.keys(timecardData).length === 0) { alert(t.emptyError); return; }
             
             if (confirm(t.confirmReset)) {
                 if (GOOGLE_WEB_APP_URL && GOOGLE_WEB_APP_URL.trim() !== "") {
-                    // Отправка в облако
+                    
                     let payload = [];
                     let now = new Date().toLocaleString();
                     
@@ -859,12 +381,7 @@
                         for (let m in timecardData[d]) {
                             timecardData[d][m].forEach(sub => {
                                 payload.push({
-                                    timestamp: now,
-                                    day: t.days[d],
-                                    task: m,
-                                    subTask: sub.subDesc || "",
-                                    hours: sub.hours,
-                                    unpaid: sub.unpaid
+                                    timestamp: now, day: t.days[d], task: m, subTask: sub.subDesc || "", hours: sub.hours, unpaid: sub.unpaid
                                 });
                             });
                         }
@@ -875,48 +392,46 @@
                     resetBtn.textContent = t.sending;
                     resetBtn.disabled = true;
 
+                    // ЗДЕСЬ ДОБАВЛЕНА ПРОВЕРКА ОШИБОК!
                     fetch(GOOGLE_WEB_APP_URL, {
                         method: 'POST',
-                        mode: 'no-cors',
+                        headers: {
+                            'Content-Type': 'text/plain;charset=utf-8',
+                        },
                         body: JSON.stringify(payload)
-                    }).then(() => {
-                        // Если нет ошибки сети - очищаем и закрываем
-                        finishReset(t, resetBtn, originalText);
-                    }).catch(err => {
-                        alert(t.sendError);
+                    })
+                    .then(response => response.text())
+                    .then(text => {
+                        if (text === "Success") {
+                            finishReset(t, resetBtn, originalText);
+                        } else {
+                            // ВЫВЕДЕТ ТОЧНУЮ ПРИЧИНУ ОТ ГУГЛА
+                            alert("ПОМИЛКА ВІД GOOGLE: " + text);
+                            resetBtn.textContent = originalText;
+                            resetBtn.disabled = false;
+                        }
+                    })
+                    .catch(err => {
+                        // ВЫВЕДЕТ ПРОБЛЕМУ ДОСТУПА ИЛИ ИНТЕРНЕТА
+                        alert("ПОМИЛКА ДОСТУПУ (CORS) АБО МЕРЕЖІ! Перевір налаштування на 'Усі' (Anyone). Деталі: " + err.message);
                         resetBtn.textContent = originalText;
                         resetBtn.disabled = false;
                     });
                     
                 } else {
-                    // Если URL не указан, работает как раньше
                     finishReset(t, null, null);
                 }
             }
         }
 
         function cancelEditMode() {
-            editingDay = null;
-            editingMainTask = null;
-            editingSubIdx = null;
-            editingUnpaid = false;
-            const addBtn = document.getElementById('addBtn');
-            addBtn.textContent = i18n[currentLang].addBtn;
-            addBtn.classList.remove('edit-mode');
+            editingDay = null; editingMainTask = null; editingSubIdx = null; editingUnpaid = false;
+            const addBtn = document.getElementById('addBtn'); addBtn.textContent = i18n[currentLang].addBtn; addBtn.classList.remove('edit-mode');
         }
 
-        function clearInputs() {
-            document.getElementById('taskInput').value = '';
-            document.getElementById('subTaskInput').value = '';
-            document.getElementById('hoursInput').value = '';
-        }
+        function clearInputs() { document.getElementById('taskInput').value = ''; document.getElementById('subTaskInput').value = ''; document.getElementById('hoursInput').value = ''; }
+        function saveData() { localStorage.setItem('timecardGroupedData', JSON.stringify(timecardData)); renderTasks(); }
 
-        function saveData() {
-            localStorage.setItem('timecardGroupedData', JSON.stringify(timecardData));
-            renderTasks();
-        }
-
-        // Запуск
         setLanguage(currentLang);
     </script>
 </body>
