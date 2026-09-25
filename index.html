@@ -259,4 +259,422 @@
         }
 
         function formatDisplayDate(dateStr) {
-            if (!dateStr) ret
+            if (!dateStr) return "";
+            if (/[a-zA-Z]/.test(dateStr) && dateStr.length > 10) {
+                let d = new Date(dateStr);
+                if (!isNaN(d.getTime())) {
+                    let day = d.getDate().toString().padStart(2, '0');
+                    let month = (d.getMonth() + 1).toString().padStart(2, '0');
+                    let year = d.getFullYear();
+                    return `${day}.${month}.${year}`;
+                }
+            }
+            if (dateStr.includes(" 00:00:00")) return dateStr.replace(" 00:00:00", "");
+            return dateStr;
+        }
+
+        function syncWithCloud() {
+            if (!GOOGLE_WEB_APP_URL) return;
+            fetch(GOOGLE_WEB_APP_URL + "?userId=" + encodeURIComponent(appUserId))
+                .then(res => res.text())
+                .then(text => {
+                    try {
+                        let data = JSON.parse(text);
+                        if (data.status === "Success") {
+                            archiveHours = data.totalHours;
+                            archiveStartDate = data.startDate || "";
+                            updateArchiveDisplay();
+                        }
+                    } catch (e) { console.log("Ожидаем обновление Google Script."); }
+                })
+                .catch(err => console.log("Offline mode"));
+        }
+
+        function setLanguage(lang) {
+            currentLang = lang; localStorage.setItem('timecardLang', lang);
+            document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${lang}`).classList.add('active');
+            const t = i18n[lang];
+            
+            document.getElementById('appTitle').textContent = t.title;
+            document.getElementById('labelDay').textContent = t.dayLabel;
+            document.getElementById('labelShiftStart').textContent = t.shiftStartLabel;
+            document.getElementById('labelTracker').textContent = t.trackerLabel;
+            document.getElementById('labelTask').textContent = t.taskLabel;
+            document.getElementById('taskInput').placeholder = t.taskPlaceholder;
+            document.getElementById('labelSubTask').textContent = t.subTaskLabel;
+            document.getElementById('subTaskInput').placeholder = t.subTaskPlaceholder;
+            
+            document.getElementById('labelEndTime').textContent = t.endTimeLabel;
+            document.getElementById('labelHours').textContent = t.hoursLabel;
+            
+            const addBtn = document.getElementById('addBtn');
+            addBtn.textContent = (editingDay !== null) ? t.saveBtn : t.addBtn;
+            document.getElementById('breakBtn').textContent = t.breakBtn;
+            document.getElementById('lunchBtn').textContent = t.lunchBtn;
+            
+            document.getElementById('exportBtn').textContent = t.exportBtn;
+            document.getElementById('exportTitle').textContent = t.exportTitle;
+            document.getElementById('resetBtn').textContent = t.resetBtn;
+            
+            document.getElementById('labelArchive').textContent = t.archiveLabel;
+            document.getElementById('labelArchiveUnit').textContent = t.unit;
+            document.getElementById('labelProfile').textContent = t.profileLabel;
+
+            const select = document.getElementById('daySelect');
+            const selectedIdx = select.value !== "" ? select.value : getCurrentDayIndex();
+            select.innerHTML = '';
+            t.days.forEach((dayName, idx) => {
+                const opt = document.createElement('option'); opt.value = idx; opt.textContent = dayName; select.appendChild(opt);
+            });
+            select.value = selectedIdx;
+            renderTasks(); updateArchiveDisplay();
+        }
+
+        function saveShiftStart() {
+            let val = document.getElementById('shiftStartInput').value;
+            if (!val) { val = '07:00'; document.getElementById('shiftStartInput').value = val; }
+            shiftStart = val; localStorage.setItem('timecardShiftStart', shiftStart); renderTasks();
+        }
+
+        function calculateHoursFromTime() {
+            let endTimeVal = document.getElementById('endTimeInput').value;
+            if (!endTimeVal) return;
+            
+            let trackerText = document.getElementById('trackerTime').textContent;
+            let [tH, tM] = trackerText.split(':').map(Number);
+            let [eH, eM] = endTimeVal.split(':').map(Number);
+            
+            let diff = (eH + eM/60) - (tH + tM/60);
+            if (diff < 0) diff += 24; 
+            
+            diff = Math.round(diff * 100) / 100;
+            document.getElementById('hoursInput').value = diff;
+        }
+
+        function updateRecentTasks() {
+            const container = document.getElementById('recentTasks');
+            container.innerHTML = '';
+            const uniqueTasks = new Set();
+            
+            for (let dayIdx in timecardData) {
+                for (let mainTask in timecardData[dayIdx]) { uniqueTasks.add(mainTask); }
+            }
+            
+            uniqueTasks.forEach(taskName => {
+                const pill = document.createElement('div');
+                pill.className = 'recent-task-pill';
+                pill.textContent = taskName;
+                pill.onclick = () => { document.getElementById('taskInput').value = taskName; };
+                container.appendChild(pill);
+            });
+        }
+
+        function updateTrackerTime(dayTotalTrackerHours) {
+            const [startH, startM] = shiftStart.split(':').map(Number);
+            const addH = Math.floor(dayTotalTrackerHours);
+            const addM = Math.round((dayTotalTrackerHours - addH) * 60);
+            let finalH = startH + addH; let finalM = startM + addM;
+            if (finalM >= 60) { finalH += Math.floor(finalM / 60); finalM = finalM % 60; }
+            if (finalH >= 24) { finalH = finalH % 24; }
+            document.getElementById('trackerTime').textContent = `${finalH.toString().padStart(2, '0')}:${finalM.toString().padStart(2, '0')}`;
+        }
+        
+        function updateArchiveDisplay() {
+            document.getElementById('archiveTime').textContent = archiveHours.toString();
+            const dateEl = document.getElementById('archiveDateDisplay');
+            const t = i18n[currentLang];
+            let cleanDate = formatDisplayDate(archiveStartDate); 
+            
+            if (cleanDate && cleanDate.trim() !== "") {
+                dateEl.textContent = `(${t.archiveSince} ${cleanDate})`;
+                dateEl.style.color = '#888';
+            } else {
+                dateEl.textContent = `(${t.archivePromptHint})`;
+                dateEl.style.color = '#555';
+            }
+        }
+        
+        function editArchiveSettings() {
+            const t = i18n[currentLang];
+            let newTotal = prompt(t.editArchivePrompt, archiveHours);
+            let newDate = prompt(t.editDatePrompt, formatDisplayDate(archiveStartDate) || '');
+            
+            if (newTotal !== null || newDate !== null) {
+                let url = `${GOOGLE_WEB_APP_URL}?action=setConfig&userId=${encodeURIComponent(appUserId)}`;
+                if (newDate !== null) url += `&date=${encodeURIComponent(newDate.trim())}`;
+                if (newTotal !== null) {
+                    let parsed = parseFloat(newTotal.replace(',', '.'));
+                    if (!isNaN(parsed) && parsed >= 0) {
+                        url += `&targetTotal=${parsed}`;
+                    }
+                }
+                
+                fetch(url)
+                    .then(res => res.text())
+                    .then(text => {
+                        try {
+                            let data = JSON.parse(text);
+                            if (data.status === "Success") {
+                                archiveHours = data.totalHours;
+                                archiveStartDate = data.startDate || "";
+                                updateArchiveDisplay();
+                            }
+                        } catch(e) { syncWithCloud(); }
+                    })
+                    .catch(err => alert("Помилка збереження: " + err.message));
+            }
+        }
+
+        function renderTasks() {
+            const taskList = document.getElementById('taskList'); taskList.innerHTML = '';
+            const select = document.getElementById('daySelect'); const dayIdx = select.value;
+            if (!dayIdx) return;
+            const t = i18n[currentLang]; const dayStr = dayIdx.toString(); const dayTasks = timecardData[dayStr];
+            let dayPaidHours = 0; let dayTrackerHours = 0;
+
+            if (dayTasks && Object.keys(dayTasks).length > 0) {
+                const dayGroup = document.createElement('div'); dayGroup.className = 'day-group';
+                let html = `<h3 class="day-title">${t.days[dayIdx]}</h3>`;
+                for (let mainTask in dayTasks) {
+                    let mainTaskPaid = 0; let subTasksHtml = ''; let isAllUnpaid = true;
+                    dayTasks[mainTask].forEach((sub, index) => {
+                        const h = parseFloat(sub.hours); dayTrackerHours += h;
+                        if (!sub.unpaid) { isAllUnpaid = false; mainTaskPaid += h; }
+                        let hourDisplay = sub.unpaid ? `<span style="color:#777;">${sub.hours} ${t.unit} <small>(${t.unpaidLabel})</small></span>` : `${sub.hours} ${t.unit}`;
+                        const displayName = sub.subDesc ? sub.subDesc : `<i>${t.noSubDetails}</i>`;
+                        subTasksHtml += `
+                            <div class="sub-task-item">
+                                <div class="sub-task-name">${displayName}</div>
+                                <div class="task-controls">
+                                    <span class="task-hours">${hourDisplay}</span>
+                                    <button class="icon-btn edit-btn" onclick="editTask('${dayStr}', '${mainTask.replace(/'/g, "\\'")}', ${index})">✎</button>
+                                    <button class="icon-btn delete-btn" onclick="deleteTask('${dayStr}', '${mainTask.replace(/'/g, "\\'")}', ${index})">✕</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    dayPaidHours += mainTaskPaid;
+                    const groupClass = isAllUnpaid ? "main-task-group unpaid-group" : "main-task-group";
+                    const unpaidTagHtml = isAllUnpaid ? `<span class="unpaid-tag">${t.unpaidTag}</span>` : '';
+                    const displayTotal = isAllUnpaid ? '' : `${mainTaskPaid} ${t.unit}`;
+                    html += `
+                        <div class="${groupClass}">
+                            <div class="main-task-header">
+                                <span class="main-task-name">${mainTask} ${unpaidTagHtml}</span>
+                                <span class="main-task-total">${displayTotal}</span>
+                            </div>
+                            <div class="sub-task-list">${subTasksHtml}</div>
+                            <button class="add-sub-btn" onclick="prefillSubTask('${dayStr}', '${mainTask.replace(/'/g, "\\'")}')">${t.addSubBtn}</button>
+                        </div>
+                    `;
+                }
+                html += `<div class="total-hours">${t.totalDay} ${dayPaidHours} ${t.unit}</div>`;
+                dayGroup.innerHTML = html; taskList.appendChild(dayGroup);
+            } else {
+                taskList.innerHTML = `<div class="empty-day">${t.noTasks}</div>`;
+            }
+            updateTrackerTime(dayTrackerHours); updateRecentTasks(); updateWeeklyTotal();
+        }
+
+        function calculateCurrentWeeklyTotal() {
+            let weeklyHours = 0;
+            for (let d in timecardData) {
+                for (let m in timecardData[d]) {
+                    timecardData[d][m].forEach(sub => { if (!sub.unpaid) weeklyHours += parseFloat(sub.hours); });
+                }
+            }
+            return weeklyHours;
+        }
+
+        function updateWeeklyTotal() {
+            let weeklyHours = calculateCurrentWeeklyTotal();
+            const t = i18n[currentLang]; const wtDiv = document.getElementById('weeklyTotal');
+            if (weeklyHours > 0) { wtDiv.style.display = 'block'; wtDiv.textContent = `${t.weeklyTotal} ${weeklyHours} ${t.unit}`; } 
+            else { wtDiv.style.display = 'none'; }
+        }
+
+        function addOrUpdateTask() {
+            const dayIdx = document.getElementById('daySelect').value;
+            const desc = document.getElementById('taskInput').value.trim();
+            const subDesc = document.getElementById('subTaskInput').value.trim();
+            const hours = parseFloat(document.getElementById('hoursInput').value);
+            const t = i18n[currentLang];
+
+            if (!desc) { alert(t.alertNoDesc); return; }
+            if (isNaN(hours) || hours <= 0) { alert(t.alertNoHours); return; }
+
+            let isUnpaid = false;
+            if (editingDay !== null) {
+                isUnpaid = editingUnpaid;
+                timecardData[editingDay][editingMainTask].splice(editingSubIdx, 1);
+                if (timecardData[editingDay][editingMainTask].length === 0) delete timecardData[editingDay][editingMainTask];
+                cancelEditMode();
+            }
+            if (!timecardData[dayIdx]) timecardData[dayIdx] = {};
+            if (!timecardData[dayIdx][desc]) timecardData[dayIdx][desc] = [];
+            timecardData[dayIdx][desc].push({ subDesc: subDesc, hours: hours, unpaid: isUnpaid });
+            saveData(); clearInputs();
+        }
+
+        function addQuickBreak() {
+            const dayIdx = document.getElementById('daySelect').value; const t = i18n[currentLang]; const task = t.breakName;
+            if (!timecardData[dayIdx]) timecardData[dayIdx] = {};
+            if (!timecardData[dayIdx][task]) timecardData[dayIdx][task] = [];
+            timecardData[dayIdx][task].push({ subDesc: "", hours: 0.5, unpaid: false });
+            saveData();
+        }
+
+        function addQuickLunch() {
+            const dayIdx = document.getElementById('daySelect').value; const t = i18n[currentLang]; const task = t.lunchName;
+            if (!timecardData[dayIdx]) timecardData[dayIdx] = {};
+            if (!timecardData[dayIdx][task]) timecardData[dayIdx][task] = [];
+            timecardData[dayIdx][task].push({ subDesc: "", hours: 0.5, unpaid: true });
+            saveData();
+        }
+
+        function prefillSubTask(dayIdx, mainTask) {
+            cancelEditMode(); document.getElementById('daySelect').value = dayIdx;
+            document.getElementById('taskInput').value = mainTask; document.getElementById('subTaskInput').value = '';
+            document.getElementById('hoursInput').value = ''; document.getElementById('endTimeInput').value = '';
+            window.scrollTo({ top: 0, behavior: 'smooth' }); document.getElementById('subTaskInput').focus();
+        }
+
+        function editTask(dayIdx, mainTask, index) {
+            const sub = timecardData[dayIdx][mainTask][index]; const t = i18n[currentLang];
+            document.getElementById('daySelect').value = dayIdx; document.getElementById('taskInput').value = mainTask;
+            document.getElementById('subTaskInput').value = sub.subDesc || ''; 
+            document.getElementById('hoursInput').value = sub.hours;
+            document.getElementById('endTimeInput').value = '';
+            
+            editingDay = dayIdx; editingMainTask = mainTask; editingSubIdx = index; editingUnpaid = sub.unpaid || false;
+            const addBtn = document.getElementById('addBtn'); addBtn.textContent = t.saveBtn; addBtn.classList.add('edit-mode');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function deleteTask(dayIdx, mainTask, index) {
+            if (editingDay === dayIdx && editingMainTask === mainTask && editingSubIdx === index) { cancelEditMode(); clearInputs(); }
+            timecardData[dayIdx][mainTask].splice(index, 1);
+            if (timecardData[dayIdx][mainTask].length === 0) delete timecardData[dayIdx][mainTask];
+            saveData();
+        }
+
+        function finishReset(t, resetBtn, originalText, finalTotal, finalDate) {
+            if (finalTotal !== undefined) {
+                archiveHours = finalTotal;
+                archiveStartDate = finalDate || "";
+            } else {
+                archiveHours += calculateCurrentWeeklyTotal();
+            }
+            timecardData = {}; cancelEditMode(); clearInputs(); saveData(); updateArchiveDisplay();
+            if (resetBtn) { resetBtn.textContent = originalText; resetBtn.disabled = false; }
+            alert(t.sendSuccess);
+        }
+
+        function resetData() {
+            const t = i18n[currentLang];
+            if (Object.keys(timecardData).length === 0) { alert(t.emptyError); return; }
+            
+            if (confirm(t.confirmReset)) {
+                if (GOOGLE_WEB_APP_URL && GOOGLE_WEB_APP_URL.trim() !== "") {
+                    let payload = []; let now = new Date().toLocaleString();
+                    for (let d in timecardData) {
+                        for (let m in timecardData[d]) {
+                            timecardData[d][m].forEach(sub => {
+                                payload.push({ userId: appUserId, timestamp: now, day: t.days[d], task: m, subTask: sub.subDesc || "", hours: sub.hours, unpaid: sub.unpaid });
+                            });
+                        }
+                    }
+                    const resetBtn = document.getElementById('resetBtn'); const originalText = resetBtn.textContent;
+                    resetBtn.textContent = t.sending; resetBtn.disabled = true;
+
+                    fetch(GOOGLE_WEB_APP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) })
+                    .then(response => response.text())
+                    .then(text => {
+                        try {
+                            let data = JSON.parse(text);
+                            if (data.status === "Success") { finishReset(t, resetBtn, originalText, data.totalHours, data.startDate); } 
+                            else { finishReset(t, resetBtn, originalText); syncWithCloud(); }
+                        } catch (e) {
+                            finishReset(t, resetBtn, originalText); syncWithCloud();
+                        }
+                    })
+                    .catch(err => { alert("ПОМИЛКА МЕРЕЖІ! " + err.message); resetBtn.textContent = originalText; resetBtn.disabled = false; });
+                }
+            }
+        }
+
+        function cancelEditMode() {
+            editingDay = null; editingMainTask = null; editingSubIdx = null; editingUnpaid = false;
+            const addBtn = document.getElementById('addBtn'); addBtn.textContent = i18n[currentLang].addBtn; addBtn.classList.remove('edit-mode');
+        }
+
+        function clearInputs() { 
+            document.getElementById('taskInput').value = ''; 
+            document.getElementById('subTaskInput').value = ''; 
+            document.getElementById('hoursInput').value = ''; 
+            document.getElementById('endTimeInput').value = ''; 
+        }
+        
+        function saveData() { localStorage.setItem('timecardGroupedData', JSON.stringify(timecardData)); renderTasks(); }
+
+        // ====== ФУНКЦИИ ЭКСПОРТА ======
+        function openExportModal() {
+            const t = i18n[currentLang];
+            const tbody = document.getElementById('exportBody');
+            tbody.innerHTML = '';
+            
+            if (Object.keys(timecardData).length === 0) {
+                alert(t.emptyError);
+                return;
+            }
+
+            let totalWeek = 0;
+            let html = '';
+
+            // Перебираем дни по порядку (от понедельника [0] до воскресенья [6])
+            for (let d = 0; d <= 6; d++) {
+                if (timecardData[d] && Object.keys(timecardData[d]).length > 0) {
+                    let dayPaid = 0;
+                    let dayTasksHtml = '';
+                    
+                    for (let mainTask in timecardData[d]) {
+                        let taskHtml = `<div class="exp-task"><div class="exp-task-name">${mainTask}</div>`;
+                        timecardData[d][mainTask].forEach(sub => {
+                            let h = parseFloat(sub.hours);
+                            if (!sub.unpaid) dayPaid += h;
+                            let subName = sub.subDesc ? sub.subDesc : `<i>${t.noSubDetails}</i>`;
+                            let hDisplay = sub.unpaid ? `<span class="exp-unpaid">${sub.hours} ${t.unit} (${t.unpaidLabel})</span>` : `${sub.hours} ${t.unit}`;
+                            taskHtml += `<div class="exp-sub"><span>- ${subName}</span><span>${hDisplay}</span></div>`;
+                        });
+                        taskHtml += `</div>`;
+                        dayTasksHtml += taskHtml;
+                    }
+                    
+                    totalWeek += dayPaid;
+                    html += `
+                        <div class="exp-day">
+                            <div class="exp-day-title">${t.days[d]} (${t.together}: ${dayPaid} ${t.unit})</div>
+                            ${dayTasksHtml}
+                        </div>
+                    `;
+                }
+            }
+            
+            html += `<div class="exp-total">${t.weeklyTotal} ${totalWeek} ${t.unit}</div>`;
+            tbody.innerHTML = html;
+            
+            document.getElementById('exportModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // Запрещаем прокрутку фона
+        }
+
+        function closeExportModal() {
+            document.getElementById('exportModal').style.display = 'none';
+            document.body.style.overflow = ''; // Возвращаем прокрутку фона
+        }
+
+        setLanguage(currentLang);
+        syncWithCloud();
+    </script>
+</body>
+</html>
