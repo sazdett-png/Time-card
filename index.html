@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Тайм-кард / Timecard</title>
-    <!-- Добавляем скрипт Telegram Web App для автоматического захвата ID -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { background-color: #121212; color: #ffffff; font-family: Arial, sans-serif; padding: 20px; padding-top: 80px; margin: 0; padding-bottom: 60px;}
@@ -17,9 +16,23 @@
         input, select, button { width: 100%; padding: 12px; margin-top: 5px; box-sizing: border-box; background: #222; color: #fff; border: 1px solid #444; border-radius: 5px; font-size: 16px; }
         input[type="time"] { appearance: none; }
         input:focus, select:focus { outline: none; border-color: #da291c; }
+        
         .tracker-block { background: #2a2a2a; border-left: 4px solid #d4af37; padding: 12px 15px; margin-top: 20px; margin-bottom: 5px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
         .tracker-label { font-size: 14px; font-weight: bold; color: #e0e0e0; }
         .tracker-time { font-size: 1.25em; font-weight: bold; color: #d4af37; }
+        
+        /* Стили для новых тегов задач (вместо datalist) */
+        .recent-tasks-container { display: flex; overflow-x: auto; gap: 8px; margin-top: 8px; padding-bottom: 5px; -ms-overflow-style: none; scrollbar-width: none; }
+        .recent-tasks-container::-webkit-scrollbar { display: none; }
+        .recent-task-pill { background: #333; color: #ddd; padding: 6px 12px; border-radius: 15px; font-size: 13px; cursor: pointer; white-space: nowrap; border: 1px solid #444; }
+        .recent-task-pill:active { background: #da291c; border-color: #da291c; color: white; }
+
+        /* Стили для двойного ввода времени */
+        .time-inputs-wrapper { display: flex; gap: 10px; margin-top: 5px; }
+        .time-box { flex: 1; }
+        .time-box label { margin-top: 10px; font-size: 12px; color: #aaa; }
+        .time-box input { margin-top: 5px; }
+
         .action-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
         .add-btn { grid-column: span 2; background-color: #da291c; color: white; font-weight: bold; border: none; cursor: pointer; transition: background-color 0.2s; margin-top: 0; }
         .add-btn:active { background-color: #b52217; }
@@ -27,6 +40,7 @@
         .add-btn.edit-mode { background-color: #d4af37; color: #000; }
         .quick-btn { background-color: #333; color: #ddd; border: 1px solid #555; font-weight: bold; cursor: pointer; transition: background-color 0.2s; white-space: nowrap; margin-top: 0; display: flex; justify-content: center; align-items: center; padding: 12px 5px; }
         .quick-btn:active { background-color: #555; }
+        
         .task-list { margin-top: 25px; }
         .day-group { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #da291c; }
         .day-title { color: #da291c; margin: 0 0 10px 0; font-size: 1.1em; border-bottom: 1px solid #333; padding-bottom: 8px; }
@@ -48,6 +62,7 @@
         .icon-btn:active { background-color: #555; }
         .add-sub-btn { background: transparent; border: 1px dashed #555; color: #aaa; width: 100%; padding: 8px; margin-top: 10px; border-radius: 4px; cursor: pointer; text-align: center; font-size: 14px; transition: all 0.2s; }
         .add-sub-btn:active { border-color: #da291c; color: #da291c; background: #333; }
+        
         .total-hours { font-weight: bold; margin-top: 15px; color: #aaa; text-align: right; border-top: 1px solid #444; padding-top: 10px; }
         .weekly-total { text-align: center; font-size: 1.1em; color: #fff; margin-top: 20px; padding: 12px; background: #1e1e1e; border-radius: 8px; border: 1px solid #da291c; font-weight: bold; }
         .archive-total { text-align: center; font-size: 0.95em; color: #ccc; margin-top: 10px; padding: 12px; background: #1a1a1a; border-radius: 8px; border: 1px solid #333; cursor: pointer; }
@@ -83,15 +98,25 @@
         <span class="tracker-time" id="trackerTime">07:00</span>
     </div>
 
+    <!-- Новое поле задач без datalist -->
     <label for="taskInput" id="labelTask">Що робив? (Головна робота)</label>
-    <input type="text" id="taskInput" list="taskSuggestions">
-    <datalist id="taskSuggestions"></datalist>
+    <input type="text" id="taskInput">
+    <div id="recentTasks" class="recent-tasks-container"></div>
 
     <label for="subTaskInput" id="labelSubTask">Деталі / Підгрупа (необов'язково):</label>
     <input type="text" id="subTaskInput">
 
-    <label for="hoursInput" id="labelHours">Час (0.25 = 15 хв, 0.5 = 30 хв, 1 = 1 год):</label>
-    <input type="number" id="hoursInput" step="0.25" min="0.25">
+    <!-- Новая двойная система часов -->
+    <div class="time-inputs-wrapper">
+        <div class="time-box">
+            <label for="endTimeInput" id="labelEndTime">О котрій закінчив?</label>
+            <input type="time" id="endTimeInput" onchange="calculateHoursFromTime()">
+        </div>
+        <div class="time-box">
+            <label for="hoursInput" id="labelHours">Або години (0.5, 1):</label>
+            <input type="number" id="hoursInput" step="0.25" min="0.01">
+        </div>
+    </div>
 
     <div class="action-buttons">
         <button class="add-btn" id="addBtn" onclick="addOrUpdateTask()">Додати запис</button>
@@ -109,25 +134,25 @@
 
     <button class="reset-btn" id="resetBtn" onclick="resetData()">Скинути все (для нового тижня)</button>
 
-    <!-- Блок отображения и смены ID пользователя -->
     <div class="user-id-block" onclick="changeUserId()">
         👤 <span id="labelProfile">Профіль / ID:</span> <span id="userIdDisplay" style="color: #bbb; font-weight: bold;"></span>
     </div>
 
     <script>
-        const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby3yGb7NblLKLLRV9sjBpNhY3Zj8W6AJoGbqRWJ2gwObmvS8DnETZvWPXViaiR7QNG8Lw/exec"; 
+        const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwC50uZdO3ghPrUJx1UcfgoNaaB3HY7mg4hro9jNM9J7TI0olk41xdU-F2mXxavFk0M/exec"; 
 
         const i18n = {
             uk: {
                 title: "Робочий табель", dayLabel: "День тижня:", days: ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"],
-                shiftStartLabel: "Початок зміни:", trackerLabel: "Поточний час за табелем:", taskLabel: "Що робив? (Головна робота)",
+                shiftStartLabel: "Початок зміни:", trackerLabel: "Час за табелем:", taskLabel: "Що робив? (Головна робота)",
                 taskPlaceholder: "Наприклад: Боксінг, Прокладка кабелю", subTaskLabel: "Деталі / Підгрупа (необов'язково):", subTaskPlaceholder: "Наприклад: 1 поверх, кімната 2",
-                hoursLabel: "Час (0.25 = 15 хв, 0.5 = 30 хв, 1 = 1 год):", addBtn: "Додати запис", saveBtn: "Зберегти зміни", breakBtn: "☕ Перерва (0.5)",
+                endTimeLabel: "О котрій закінчив?", hoursLabel: "Або години (0.5, 1):",
+                addBtn: "Додати запис", saveBtn: "Зберегти зміни", breakBtn: "☕ Перерва (0.5)",
                 breakName: "Перерва", lunchBtn: "🍔 Ланч (0.5)", lunchName: "Ланч", unpaidLabel: "неоплач.", unpaidTag: "НЕОПЛАЧ.",
                 addSubBtn: "+ Додати сюди", noSubDetails: "Основна робота", totalDay: "Усього за день (оплачується):", weeklyTotal: "Разом за тиждень (оплачується):",
                 archiveLabel: "Стаж за весь час:", archiveSince: "з", archivePromptHint: "натисни, щоб встановити дату",
                 editArchivePrompt: "Введи загальну кількість годин за весь час:", editDatePrompt: "Введи дату початку (у форматі ДД.ММ.РРРР):",
-                noTasks: "Немає записів на цей день", resetBtn: "Скинути все (для нового тижня)", alertNoDesc: "Будь ласка, напиши, що ти робив.", alertNoHours: "Вкажи коректний час.",
+                noTasks: "Немає записів на цей день", resetBtn: "Скинути все (для нового тижня)", alertNoDesc: "Будь ласка, напиши, що ти робив.", alertNoHours: "Вкажи коректний час або години.",
                 confirmReset: "Видалити всі записи за тиждень? Дані підуть у Google Таблицю.", sending: "Відправка в таблицю... ⏳", sendSuccess: "Успішно! Дані збережено в хмару.",
                 emptyError: "Табель порожній, немає чого відправляти.", unit: "год.",
                 profileLabel: "Профіль / ID:", changeIdPrompt: "Введіть свій ID (якщо змінили телефон або браузер):"
@@ -135,47 +160,43 @@
             en: {
                 title: "Work Timecard", dayLabel: "Day of the week:", days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
                 shiftStartLabel: "Shift start:", trackerLabel: "Current tracked time:", taskLabel: "Main Task:", taskPlaceholder: "E.g.: Boxing, Pulling wire",
-                subTaskLabel: "Details / Sub-group (optional):", subTaskPlaceholder: "E.g.: 1st floor, room 2", hoursLabel: "Time (0.25 = 15m, 0.5 = 30m, 1 = 1h):",
+                subTaskLabel: "Details / Sub-group (optional):", subTaskPlaceholder: "E.g.: 1st floor, room 2", 
+                endTimeLabel: "Time finished?", hoursLabel: "Or hours (0.5, 1):",
                 addBtn: "Add entry", saveBtn: "Save changes", breakBtn: "☕ Break (0.5)", breakName: "Break", lunchBtn: "🍔 Lunch (0.5)", lunchName: "Lunch",
                 unpaidLabel: "unpaid", unpaidTag: "UNPAID", addSubBtn: "+ Add here", noSubDetails: "Main work", totalDay: "Total for day (paid):",
                 weeklyTotal: "Weekly total (paid):", archiveLabel: "All-time total:", archiveSince: "since", archivePromptHint: "click to set start date",
                 editArchivePrompt: "Enter total all-time hours:", editDatePrompt: "Enter start date (e.g. DD.MM.YYYY):",
-                noTasks: "No entries for this day", resetBtn: "Reset all (for new week)", alertNoDesc: "Please describe what you did.", alertNoHours: "Enter valid hours.",
+                noTasks: "No entries for this day", resetBtn: "Reset all (for new week)", alertNoDesc: "Please describe what you did.", alertNoHours: "Enter valid time or hours.",
                 confirmReset: "Delete all entries for the week? Data will be sent to Google Sheets.", sending: "Sending to Sheets... ⏳", sendSuccess: "Success! Data saved to cloud.",
                 emptyError: "Timecard is empty.", unit: "hrs",
                 profileLabel: "Profile / ID:", changeIdPrompt: "Enter your ID (if you changed phone/browser):"
             },
             ru: {
                 title: "Рабочий табель", dayLabel: "День недели:", days: ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"],
-                shiftStartLabel: "Начало смены:", trackerLabel: "Текущее время по табелю:", taskLabel: "Что делал? (Главная работа)",
+                shiftStartLabel: "Начало смены:", trackerLabel: "Время по табелю:", taskLabel: "Что делал? (Главная работа)",
                 taskPlaceholder: "Например: Боксинг, Протяжка", subTaskLabel: "Детали / Подгруппа (необязательно):", subTaskPlaceholder: "Например: 1 этаж, комната",
-                hoursLabel: "Время (0.25 = 15 мин, 0.5 = 30 мин, 1 = 1 час):", addBtn: "Добавить запись", saveBtn: "Сохранить изменения", breakBtn: "☕ Перерыв (0.5)",
+                endTimeLabel: "Во сколько закончил?", hoursLabel: "Или часы (0.5, 1):",
+                addBtn: "Добавить запись", saveBtn: "Сохранить изменения", breakBtn: "☕ Перерыв (0.5)",
                 breakName: "Перерыв", lunchBtn: "🍔 Ланч (0.5)", lunchName: "Ланч", unpaidLabel: "неоплач.", unpaidTag: "НЕОПЛАЧ.", addSubBtn: "+ Добавить сюда",
                 noSubDetails: "Основная работа", totalDay: "Итого за день (оплачивается):", weeklyTotal: "Всего за неделю (оплачивается):",
                 archiveLabel: "Стаж за всё время:", archiveSince: "с", archivePromptHint: "нажми, чтобы установить дату",
                 editArchivePrompt: "Введи общую сумму часов за всё время:", editDatePrompt: "Введи дату начала (в формате ДД.ММ.ГГГГ):",
-                noTasks: "Нет записей на этот день", resetBtn: "Сбросить всё (для новой недели)", alertNoDesc: "Пожалуйста, напиши, что ты делал.", alertNoHours: "Укажи корректное время.",
+                noTasks: "Нет записей на этот день", resetBtn: "Сбросить всё (для новой недели)", alertNoDesc: "Пожалуйста, напиши, что ты делал.", alertNoHours: "Укажи корректное время или часы.",
                 confirmReset: "Удалить все записи за неделю? Данные уйдут в Google Таблицу.", sending: "Отправка в таблицу... ⏳", sendSuccess: "Успешно! Данные сохранены в облако.",
                 emptyError: "Табель пуст, нечего отправлять.", unit: "ч.",
                 profileLabel: "Профиль / ID:", changeIdPrompt: "Введите свой ID (если сменили телефон или браузер):"
             }
         };
 
-        // ====== ИНИЦИАЛИЗАЦИЯ ИЛИ СОЗДАНИЕ УНИКАЛЬНОГО ID ======
         let appUserId = localStorage.getItem('timecard_appUserId');
-        
-        // Пытаемся взять ID из Телеграма (если открыто через Web App бота)
         if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
             appUserId = "tg_" + window.Telegram.WebApp.initDataUnsafe.user.id;
             localStorage.setItem('timecard_appUserId', appUserId);
-        } 
-        // Если открыто в браузере и ID еще нет - генерируем случайный
-        else if (!appUserId) {
+        } else if (!appUserId) {
             appUserId = "web_" + Math.random().toString(36).substr(2, 6);
             localStorage.setItem('timecard_appUserId', appUserId);
         }
         document.getElementById('userIdDisplay').textContent = appUserId;
-        // =======================================================
 
         let currentLang = localStorage.getItem('timecardLang') || 'uk';
         let timecardData = JSON.parse(localStorage.getItem('timecardGroupedData')) || {};
@@ -184,7 +205,6 @@
         
         let archiveHours = 0;
         let archiveStartDate = "";
-
         let editingDay = null, editingMainTask = null, editingSubIdx = null, editingUnpaid = false;
 
         function getCurrentDayIndex() {
@@ -192,7 +212,6 @@
             return (today === 0 ? 6 : today - 1).toString();
         }
 
-        // Функция смены ID вручную
         function changeUserId() {
             const t = i18n[currentLang];
             let newId = prompt(t.changeIdPrompt, appUserId);
@@ -200,7 +219,7 @@
                 appUserId = newId.trim();
                 localStorage.setItem('timecard_appUserId', appUserId);
                 document.getElementById('userIdDisplay').textContent = appUserId;
-                syncWithCloud(); // Сразу подтягиваем стату для нового ID
+                syncWithCloud(); 
             }
         }
 
@@ -215,15 +234,12 @@
                     return `${day}.${month}.${year}`;
                 }
             }
-            if (dateStr.includes(" 00:00:00")) {
-                return dateStr.replace(" 00:00:00", "");
-            }
+            if (dateStr.includes(" 00:00:00")) return dateStr.replace(" 00:00:00", "");
             return dateStr;
         }
 
         function syncWithCloud() {
             if (!GOOGLE_WEB_APP_URL) return;
-            // Передаем наш уникальный ID при загрузке статы
             fetch(GOOGLE_WEB_APP_URL + "?userId=" + encodeURIComponent(appUserId))
                 .then(res => res.text())
                 .then(text => {
@@ -234,9 +250,7 @@
                             archiveStartDate = data.startDate || "";
                             updateArchiveDisplay();
                         }
-                    } catch (e) {
-                        console.log("Ожидаем обновление Google Script. Ответ:", text);
-                    }
+                    } catch (e) { console.log("Ожидаем обновление Google Script."); }
                 })
                 .catch(err => console.log("Offline mode"));
         }
@@ -246,6 +260,7 @@
             document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`btn-${lang}`).classList.add('active');
             const t = i18n[lang];
+            
             document.getElementById('appTitle').textContent = t.title;
             document.getElementById('labelDay').textContent = t.dayLabel;
             document.getElementById('labelShiftStart').textContent = t.shiftStartLabel;
@@ -254,7 +269,10 @@
             document.getElementById('taskInput').placeholder = t.taskPlaceholder;
             document.getElementById('labelSubTask').textContent = t.subTaskLabel;
             document.getElementById('subTaskInput').placeholder = t.subTaskPlaceholder;
+            
+            document.getElementById('labelEndTime').textContent = t.endTimeLabel;
             document.getElementById('labelHours').textContent = t.hoursLabel;
+            
             const addBtn = document.getElementById('addBtn');
             addBtn.textContent = (editingDay !== null) ? t.saveBtn : t.addBtn;
             document.getElementById('breakBtn').textContent = t.breakBtn;
@@ -280,14 +298,39 @@
             shiftStart = val; localStorage.setItem('timecardShiftStart', shiftStart); renderTasks();
         }
 
-        function updateDatalist() {
-            const datalist = document.getElementById('taskSuggestions'); datalist.innerHTML = '';
+        // Авто-подсчет часов на основе введенного времени окончания
+        function calculateHoursFromTime() {
+            let endTimeVal = document.getElementById('endTimeInput').value;
+            if (!endTimeVal) return;
+            
+            let trackerText = document.getElementById('trackerTime').textContent;
+            let [tH, tM] = trackerText.split(':').map(Number);
+            let [eH, eM] = endTimeVal.split(':').map(Number);
+            
+            let diff = (eH + eM/60) - (tH + tM/60);
+            if (diff < 0) diff += 24; // Если переход через полночь
+            
+            // Округляем до сотых
+            diff = Math.round(diff * 100) / 100;
+            document.getElementById('hoursInput').value = diff;
+        }
+
+        // Новая функция рендеринга кнопок-тегов (вместо datalist)
+        function updateRecentTasks() {
+            const container = document.getElementById('recentTasks');
+            container.innerHTML = '';
             const uniqueTasks = new Set();
+            
             for (let dayIdx in timecardData) {
                 for (let mainTask in timecardData[dayIdx]) { uniqueTasks.add(mainTask); }
             }
+            
             uniqueTasks.forEach(taskName => {
-                const opt = document.createElement('option'); opt.value = taskName; datalist.appendChild(opt);
+                const pill = document.createElement('div');
+                pill.className = 'recent-task-pill';
+                pill.textContent = taskName;
+                pill.onclick = () => { document.getElementById('taskInput').value = taskName; };
+                container.appendChild(pill);
             });
         }
 
@@ -322,7 +365,6 @@
             let newDate = prompt(t.editDatePrompt, formatDisplayDate(archiveStartDate) || '');
             
             if (newTotal !== null || newDate !== null) {
-                // Передаем userId при сохранении настроек
                 let url = `${GOOGLE_WEB_APP_URL}?action=setConfig&userId=${encodeURIComponent(appUserId)}`;
                 if (newDate !== null) url += `&date=${encodeURIComponent(newDate.trim())}`;
                 if (newTotal !== null) {
@@ -342,9 +384,7 @@
                                 archiveStartDate = data.startDate || "";
                                 updateArchiveDisplay();
                             }
-                        } catch(e) {
-                            alert("Гугл вернул старый код. Ответ: " + text);
-                        }
+                        } catch(e) { alert("Гугл вернул старый код. Ответ: " + text); }
                     })
                     .catch(err => alert("Помилка збереження: " + err.message));
             }
@@ -398,7 +438,7 @@
             } else {
                 taskList.innerHTML = `<div class="empty-day">${t.noTasks}</div>`;
             }
-            updateTrackerTime(dayTrackerHours); updateDatalist(); updateWeeklyTotal();
+            updateTrackerTime(dayTrackerHours); updateRecentTasks(); updateWeeklyTotal();
         }
 
         function calculateCurrentWeeklyTotal() {
@@ -460,13 +500,17 @@
         function prefillSubTask(dayIdx, mainTask) {
             cancelEditMode(); document.getElementById('daySelect').value = dayIdx;
             document.getElementById('taskInput').value = mainTask; document.getElementById('subTaskInput').value = '';
-            document.getElementById('hoursInput').value = ''; window.scrollTo({ top: 0, behavior: 'smooth' }); document.getElementById('subTaskInput').focus();
+            document.getElementById('hoursInput').value = ''; document.getElementById('endTimeInput').value = '';
+            window.scrollTo({ top: 0, behavior: 'smooth' }); document.getElementById('subTaskInput').focus();
         }
 
         function editTask(dayIdx, mainTask, index) {
             const sub = timecardData[dayIdx][mainTask][index]; const t = i18n[currentLang];
             document.getElementById('daySelect').value = dayIdx; document.getElementById('taskInput').value = mainTask;
-            document.getElementById('subTaskInput').value = sub.subDesc || ''; document.getElementById('hoursInput').value = sub.hours;
+            document.getElementById('subTaskInput').value = sub.subDesc || ''; 
+            document.getElementById('hoursInput').value = sub.hours;
+            document.getElementById('endTimeInput').value = '';
+            
             editingDay = dayIdx; editingMainTask = mainTask; editingSubIdx = index; editingUnpaid = sub.unpaid || false;
             const addBtn = document.getElementById('addBtn'); addBtn.textContent = t.saveBtn; addBtn.classList.add('edit-mode');
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -486,16 +530,8 @@
             } else {
                 archiveHours += calculateCurrentWeeklyTotal();
             }
-            timecardData = {};
-            cancelEditMode();
-            clearInputs();
-            saveData();
-            updateArchiveDisplay();
-            
-            if (resetBtn) {
-                resetBtn.textContent = originalText;
-                resetBtn.disabled = false;
-            }
+            timecardData = {}; cancelEditMode(); clearInputs(); saveData(); updateArchiveDisplay();
+            if (resetBtn) { resetBtn.textContent = originalText; resetBtn.disabled = false; }
             alert(t.sendSuccess);
         }
 
@@ -505,56 +541,30 @@
             
             if (confirm(t.confirmReset)) {
                 if (GOOGLE_WEB_APP_URL && GOOGLE_WEB_APP_URL.trim() !== "") {
-                    let payload = [];
-                    let now = new Date().toLocaleString();
-                    
+                    let payload = []; let now = new Date().toLocaleString();
                     for (let d in timecardData) {
                         for (let m in timecardData[d]) {
                             timecardData[d][m].forEach(sub => {
-                                payload.push({
-                                    userId: appUserId, // ДОБАВЛЯЕМ ID В ОТПРАВКУ
-                                    timestamp: now, day: t.days[d], task: m, subTask: sub.subDesc || "", hours: sub.hours, unpaid: sub.unpaid
-                                });
+                                payload.push({ userId: appUserId, timestamp: now, day: t.days[d], task: m, subTask: sub.subDesc || "", hours: sub.hours, unpaid: sub.unpaid });
                             });
                         }
                     }
-                    
-                    const resetBtn = document.getElementById('resetBtn');
-                    const originalText = resetBtn.textContent;
-                    resetBtn.textContent = t.sending;
-                    resetBtn.disabled = true;
+                    const resetBtn = document.getElementById('resetBtn'); const originalText = resetBtn.textContent;
+                    resetBtn.textContent = t.sending; resetBtn.disabled = true;
 
-                    fetch(GOOGLE_WEB_APP_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify(payload)
-                    })
+                    fetch(GOOGLE_WEB_APP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) })
                     .then(response => response.text())
                     .then(text => {
                         try {
                             let data = JSON.parse(text);
-                            if (data.status === "Success") {
-                                finishReset(t, resetBtn, originalText, data.totalHours, data.startDate);
-                            } else {
-                                alert("ПОМИЛКА ВІД GOOGLE: " + data.message);
-                                resetBtn.textContent = originalText;
-                                resetBtn.disabled = false;
-                            }
+                            if (data.status === "Success") { finishReset(t, resetBtn, originalText, data.totalHours, data.startDate); } 
+                            else { alert("ПОМИЛКА ВІД GOOGLE: " + data.message); resetBtn.textContent = originalText; resetBtn.disabled = false; }
                         } catch (e) {
-                            if (text.trim() === "Success") {
-                                finishReset(t, resetBtn, originalText);
-                            } else {
-                                alert("Неожиданный ответ от Гугла: " + text);
-                                resetBtn.textContent = originalText;
-                                resetBtn.disabled = false;
-                            }
+                            if (text.trim() === "Success") { finishReset(t, resetBtn, originalText); } 
+                            else { alert("Неожиданный ответ от Гугла: " + text); resetBtn.textContent = originalText; resetBtn.disabled = false; }
                         }
                     })
-                    .catch(err => {
-                        alert("ПОМИЛКА МЕРЕЖІ! " + err.message);
-                        resetBtn.textContent = originalText;
-                        resetBtn.disabled = false;
-                    });
+                    .catch(err => { alert("ПОМИЛКА МЕРЕЖІ! " + err.message); resetBtn.textContent = originalText; resetBtn.disabled = false; });
                 }
             }
         }
@@ -564,7 +574,13 @@
             const addBtn = document.getElementById('addBtn'); addBtn.textContent = i18n[currentLang].addBtn; addBtn.classList.remove('edit-mode');
         }
 
-        function clearInputs() { document.getElementById('taskInput').value = ''; document.getElementById('subTaskInput').value = ''; document.getElementById('hoursInput').value = ''; }
+        function clearInputs() { 
+            document.getElementById('taskInput').value = ''; 
+            document.getElementById('subTaskInput').value = ''; 
+            document.getElementById('hoursInput').value = ''; 
+            document.getElementById('endTimeInput').value = ''; 
+        }
+        
         function saveData() { localStorage.setItem('timecardGroupedData', JSON.stringify(timecardData)); renderTasks(); }
 
         setLanguage(currentLang);
